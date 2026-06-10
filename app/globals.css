@@ -1,0 +1,212 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────
+   AssetFlow base — editorial, warm, paper-like.
+   ───────────────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    --ring-amber: 0 0 0 3px rgba(184, 132, 43, 0.12);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: #f5f1e8; /* warm */
+    color: #1a1f2e; /* ink */
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: #f5debe; /* amber-sf */
+    color: #1a1f2e;
+  }
+}
+
+@layer components {
+  /* Display serif — page titles, metric values */
+  .display-serif {
+    font-family: var(--font-fraunces), serif;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+
+  /* Eyebrow — kicker, table header, field label, badge */
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d9d2c0; /* line-dk */
+  border-radius: 9999px;
+  border: 2px solid #f5f1e8;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c7bda6;
+}
+
+/* ── Form controls — base styling ─────────────────────────── */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="search"],
+textarea,
+select {
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #e8e2d4; /* line */
+  border-radius: 6px; /* rounded-md */
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #1a1f2e;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 5rem;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #7a8090; /* ink-mute */
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #b8842b; /* amber */
+  box-shadow: var(--ring-amber);
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  background-color: #f5f1e8;
+  color: #7a8090;
+  cursor: not-allowed;
+}
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%237A8090' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  padding-right: 2rem;
+}
+
+/* ── Animations ───────────────────────────────────────────── */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.anim-fade {
+  animation: fadeIn 0.22s ease both;
+}
+.anim-slide {
+  animation: slideUp 0.26s ease both;
+}
+.anim-scale {
+  animation: scaleIn 0.18s ease both;
+}
+
+/* Hover lift for cards */
+.hover-lift {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(26, 31, 46, 0.08), 0 2px 4px rgba(26, 31, 46, 0.04);
+}
+
+/* Signature canvas */
+.sig-canvas {
+  background-color: #ffffff;
+  border: 1px dashed #d9d2c0;
+  border-radius: 8px;
+  touch-action: none;
+  cursor: crosshair;
+  width: 100%;
+}
+
+/* Number input — hide spinners */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ── Print — Delivery Note ────────────────────────────────── */
+@media print {
+  body {
+    background: #ffffff;
+  }
+  /* Print only the marked preview area. */
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

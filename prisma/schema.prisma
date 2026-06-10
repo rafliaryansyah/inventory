@@ -1,0 +1,292 @@
+// AssetFlow — Sistem Informasi Manajemen Aset
+// PT Handal Informasi Teknologi
+//
+// Database: Neon PostgreSQL (deployed on Railway).
+// Single pooled connection string via DATABASE_URL (no separate directUrl).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────
+enum UserRole {
+  KARYAWAN
+  ADMIN_ASET
+  MANAGER
+}
+
+enum Urgency {
+  RENDAH
+  NORMAL
+  TINGGI
+  KRITIKAL
+}
+
+enum RequestStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  PROCESSING
+  READY_TO_SIGN
+  COMPLETED
+}
+
+enum AssetStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+  DAMAGED
+  RETIRED
+}
+
+enum StockStatus {
+  OK
+  LOW
+  EMPTY
+}
+
+enum DnStatus {
+  DRAFT
+  READY_TO_SIGN
+  SIGNED
+  ARCHIVED
+}
+
+enum PoStatus {
+  DRAFT
+  APPROVED
+  IN_PROGRESS
+  RECEIVED
+}
+
+enum NotifType {
+  NEW_REQUEST
+  APPROVED
+  REJECTED
+  DN_READY
+  ASSET_RECEIVED
+  LOW_STOCK
+}
+
+// ─── MODELS ──────────────────────────────────────────────
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(255)
+  name         String   @db.VarChar(100)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  role         UserRole
+  division     String?  @db.VarChar(100)
+  avatarColor  String?  @map("avatar_color") @db.VarChar(20)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  requestsMade     AssetRequest[] @relation("Requester")
+  requestsApproved AssetRequest[] @relation("Approver")
+  assetsAssigned   Asset[]        @relation("AssignedTo")
+  dnReceived       DeliveryNote[] @relation("Recipient")
+  dnCreated        DeliveryNote[] @relation("Creator")
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model AssetCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique @db.VarChar(100)
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  inventory    Inventory[]
+  assets       Asset[]
+  requestItems RequestItem[]
+
+  @@map("asset_categories")
+}
+
+model Inventory {
+  id           String      @id @default(uuid()) @db.Uuid
+  categoryId   String      @map("category_id") @db.Uuid
+  itemName     String      @map("item_name") @db.VarChar(200)
+  currentStock Int         @default(0) @map("current_stock")
+  minStock     Int         @default(0) @map("min_stock")
+  status       StockStatus @default(OK)
+  unit         String      @default("pcs") @db.VarChar(20)
+  price        Decimal     @default(0) @db.Decimal(15, 2)
+  updatedAt    DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+
+  category AssetCategory @relation(fields: [categoryId], references: [id])
+
+  @@unique([categoryId, itemName])
+  @@index([status])
+  @@map("inventory")
+}
+
+model AssetRequest {
+  id            String        @id @default(uuid()) @db.Uuid
+  requestNumber String        @unique @map("request_number") @db.VarChar(30)
+  requesterId   String        @map("requester_id") @db.Uuid
+  reason        String
+  urgency       Urgency       @default(NORMAL)
+  status        RequestStatus @default(PENDING_APPROVAL)
+  neededDate    DateTime?     @map("needed_date") @db.Date
+  approvedById  String?       @map("approved_by") @db.Uuid
+  approvedAt    DateTime?     @map("approved_at") @db.Timestamptz
+  rejectReason  String?       @map("reject_reason")
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  requester     User              @relation("Requester", fields: [requesterId], references: [id])
+  approver      User?             @relation("Approver", fields: [approvedById], references: [id])
+  items         RequestItem[]
+  deliveryNote  DeliveryNote?
+  purchaseOrder PurchaseOrder?
+  timeline      RequestTimeline[]
+
+  @@index([status])
+  @@index([requesterId])
+  @@map("asset_requests")
+}
+
+model RequestTimeline {
+  id        String   @id @default(uuid()) @db.Uuid
+  requestId String   @map("request_id") @db.Uuid
+  label     String   @db.VarChar(200)
+  actor     String   @db.VarChar(100)
+  at        DateTime @default(now()) @db.Timestamptz
+
+  request AssetRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@map("request_timeline")
+}
+
+model RequestItem {
+  id         String  @id @default(uuid()) @db.Uuid
+  requestId  String  @map("request_id") @db.Uuid
+  categoryId String? @map("category_id") @db.Uuid
+  itemName   String  @map("item_name") @db.VarChar(200)
+  quantity   Int
+  notes      String?
+
+  request  AssetRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  category AssetCategory? @relation(fields: [categoryId], references: [id])
+
+  @@index([requestId])
+  @@map("request_items")
+}
+
+model Asset {
+  id           String      @id @default(uuid()) @db.Uuid
+  assetCode    String      @unique @map("asset_code") @db.VarChar(30)
+  name         String      @db.VarChar(200)
+  categoryId   String      @map("category_id") @db.Uuid
+  qrCode       String?     @unique @map("qr_code") @db.VarChar(255)
+  status       AssetStatus @default(AVAILABLE)
+  location     String?     @db.VarChar(150)
+  assignedToId String?     @map("assigned_to") @db.Uuid
+  purchaseDate DateTime?   @map("purchase_date") @db.Date
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+
+  category   AssetCategory      @relation(fields: [categoryId], references: [id])
+  assignedTo User?              @relation("AssignedTo", fields: [assignedToId], references: [id])
+  dnItems    DeliveryNoteItem[]
+
+  @@index([status])
+  @@index([categoryId])
+  @@map("assets")
+}
+
+model DeliveryNote {
+  id            String    @id @default(uuid()) @db.Uuid
+  dnNumber      String    @unique @map("dn_number") @db.VarChar(30)
+  requestId     String    @unique @map("request_id") @db.Uuid
+  recipientId   String    @map("recipient_id") @db.Uuid
+  createdById   String    @map("created_by") @db.Uuid
+  pdfUrl        String?   @map("pdf_url") @db.VarChar(500)
+  signatureData String?   @map("signature_data") // base64 PNG
+  signedAt      DateTime? @map("signed_at") @db.Timestamptz
+  status        DnStatus  @default(DRAFT)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  request   AssetRequest       @relation(fields: [requestId], references: [id])
+  recipient User               @relation("Recipient", fields: [recipientId], references: [id])
+  creator   User               @relation("Creator", fields: [createdById], references: [id])
+  items     DeliveryNoteItem[]
+
+  @@index([status])
+  @@map("delivery_notes")
+}
+
+model DeliveryNoteItem {
+  id             String   @id @default(uuid()) @db.Uuid
+  deliveryNoteId String   @map("delivery_note_id") @db.Uuid
+  assetId        String   @map("asset_id") @db.Uuid
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  deliveryNote DeliveryNote @relation(fields: [deliveryNoteId], references: [id], onDelete: Cascade)
+  asset        Asset        @relation(fields: [assetId], references: [id])
+
+  @@unique([deliveryNoteId, assetId])
+  @@map("delivery_note_items")
+}
+
+model PurchaseOrder {
+  id         String    @id @default(uuid()) @db.Uuid
+  poNumber   String    @unique @map("po_number") @db.VarChar(30)
+  requestId  String?   @unique @map("request_id") @db.Uuid
+  supplier   String    @db.VarChar(200)
+  totalCost  Decimal   @map("total_cost") @db.Decimal(15, 2)
+  status     PoStatus  @default(DRAFT)
+  itemCount  Int       @default(0) @map("item_count")
+  notes      String?
+  expectedAt DateTime? @map("expected_at") @db.Date
+  receivedAt DateTime? @map("received_at") @db.Timestamptz
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  request AssetRequest? @relation(fields: [requestId], references: [id])
+
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  title     String    @db.VarChar(200)
+  message   String
+  type      NotifType
+  isRead    Boolean   @default(false) @map("is_read")
+  entityId  String?   @map("entity_id") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @map("user_id") @db.Uuid
+  action     String   @db.VarChar(50)
+  entityType String   @map("entity_type") @db.VarChar(50)
+  entityId   String   @map("entity_id") @db.Uuid
+  changes    Json?
+  ipAddress  String?  @map("ip_address") @db.Inet
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
