@@ -19,6 +19,7 @@ export async function getAssets(filters?: AssetFilters) {
     include: {
       category: { select: { name: true } },
       assignedTo: { select: { id: true, name: true, division: true } },
+      _count: { select: { photos: true } },
     },
   });
 }

@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   AlertOctagon,
   Boxes,
+  ImagePlus,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +26,7 @@ import {
   QrScannerModal,
   type ScanAsset,
 } from "@/components/modals/qr-scanner-modal";
+import { AssetPhotosModal } from "@/components/modals/asset-photos-modal";
 import { useToast } from "@/components/layout/toast";
 import {
   registerAsset,
@@ -42,6 +45,7 @@ type Asset = {
   location: string | null;
   category: { name: string };
   assignedTo: { id: string; name: string; division: string | null } | null;
+  _count?: { photos: number };
 };
 type Category = { id: string; name: string };
 type User = { id: string; name: string; division: string | null };
@@ -62,6 +66,7 @@ export function MasterAsetClient({
   const [registerOpen, setRegisterOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [transferTarget, setTransferTarget] = useState<Asset | null>(null);
+  const [photoTarget, setPhotoTarget] = useState<Asset | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -147,7 +152,18 @@ export function MasterAsetClient({
                     </td>
                     <td className="px-5 py-3 font-mono text-xs">{a.assetCode}</td>
                     <td className="px-5 py-3">
-                      <span className="text-ink">{a.name}</span>
+                      <span className="flex items-center gap-1.5 text-ink">
+                        {a.name}
+                        {!!a._count?.photos && (
+                          <span
+                            className="inline-flex items-center gap-0.5 text-xs text-ink-mute"
+                            title={`${a._count.photos} foto`}
+                          >
+                            <ImageIcon className="h-3.5 w-3.5" />
+                            {a._count.photos}
+                          </span>
+                        )}
+                      </span>
                       <span className="block text-xs text-ink-mute">
                         {a.category.name}
                       </span>
@@ -165,6 +181,7 @@ export function MasterAsetClient({
                       <RowMenu
                         asset={a}
                         onTransfer={() => setTransferTarget(a)}
+                        onPhotos={() => setPhotoTarget(a)}
                       />
                     </td>
                   </tr>
@@ -191,6 +208,10 @@ export function MasterAsetClient({
         onClose={() => setScanOpen(false)}
         assets={assets as unknown as ScanAsset[]}
       />
+      <AssetPhotosModal
+        asset={photoTarget}
+        onClose={() => setPhotoTarget(null)}
+      />
     </div>
   );
 }
@@ -198,9 +219,11 @@ export function MasterAsetClient({
 function RowMenu({
   asset,
   onTransfer,
+  onPhotos,
 }: {
   asset: Asset;
   onTransfer: () => void;
+  onPhotos: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -242,6 +265,15 @@ function RowMenu({
       </button>
       {open && (
         <div className="anim-scale absolute right-0 z-20 mt-1 w-48 origin-top-right overflow-hidden rounded-lg border border-line bg-paper shadow-lift">
+          <MenuItem
+            icon={<ImagePlus className="h-4 w-4" />}
+            onClick={() => {
+              setOpen(false);
+              onPhotos();
+            }}
+          >
+            Kelola Foto
+          </MenuItem>
           <MenuItem
             icon={<ArrowLeftRight className="h-4 w-4" />}
             onClick={() => {

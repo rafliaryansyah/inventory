@@ -43,7 +43,7 @@ export function LineChart({
               x2={W - padX}
               y1={y(g)}
               y2={y(g)}
-              stroke="#E8E2D4"
+              stroke="#DCE6F1"
               strokeWidth={1}
             />
             <text x={0} y={y(g) - 2} className="fill-ink-mute" style={{ fontSize: 8 }}>
@@ -54,11 +54,11 @@ export function LineChart({
 
         {n > 0 && (
           <>
-            <path d={areaPath} fill="#B8842B" opacity={0.08} />
+            <path d={areaPath} fill="#4F86C6" opacity={0.08} />
             <polyline
               points={points}
               fill="none"
-              stroke="#B8842B"
+              stroke="#4F86C6"
               strokeWidth={2}
               strokeLinejoin="round"
               strokeLinecap="round"
@@ -69,7 +69,7 @@ export function LineChart({
                 cx={x(i)}
                 cy={y(d.value)}
                 r={2.5}
-                fill="#B8842B"
+                fill="#4F86C6"
               >
                 <title>{`${d.label}: ${d.value}%`}</title>
               </circle>

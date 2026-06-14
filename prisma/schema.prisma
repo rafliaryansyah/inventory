@@ -199,10 +199,25 @@ model Asset {
   category   AssetCategory      @relation(fields: [categoryId], references: [id])
   assignedTo User?              @relation("AssignedTo", fields: [assignedToId], references: [id])
   dnItems    DeliveryNoteItem[]
+  photos     AssetPhoto[]
 
   @@index([status])
   @@index([categoryId])
   @@map("assets")
+}
+
+model AssetPhoto {
+  id           String   @id @default(uuid()) @db.Uuid
+  assetId      String   @map("asset_id") @db.Uuid
+  objectKey    String   @map("object_key") @db.VarChar(500) // key R2; URL diresolve saat dibaca
+  caption      String?  @db.VarChar(200)
+  uploadedById String?  @map("uploaded_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_photos")
 }
 
 model DeliveryNote {

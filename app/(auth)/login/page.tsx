@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useActionState } from "react";
 import { LogIn, AlertCircle } from "lucide-react";
 import { authenticate, type LoginState } from "@/actions/auth";
@@ -22,10 +23,15 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-warm px-5 py-10">
       <div className="w-full max-w-md">
         {/* Brand */}
-        <div className="mb-8 flex items-center justify-center gap-2.5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber font-serif text-xl font-semibold text-paper">
-            A
-          </span>
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <Image
+            src="/logo.png"
+            alt="Handal Informasi Teknologi"
+            width={160}
+            height={128}
+            priority
+            className="h-auto w-32"
+          />
           <span className="display-serif text-3xl">AssetFlow</span>
         </div>
 

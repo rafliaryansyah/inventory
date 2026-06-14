@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Inbox, PlayCircle, FileText, PenLine } from "lucide-react";
 import { Tabs } from "@/components/ui/tabs";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Pagination } from "@/components/ui/pagination";
 import {
   CreateDnModal,
   type SelectableAsset,
@@ -42,6 +43,7 @@ export function AntrianClient({
   availableAssets: SelectableAsset[];
 }) {
   const [tab, setTab] = useState("perlu");
+  const [page, setPage] = useState(0);
   const [dnTarget, setDnTarget] = useState<{
     id: string;
     number: string;
@@ -84,6 +86,17 @@ export function AntrianClient({
         ? queue.sedangProses
         : queue.menungguTtd;
 
+  const PAGE_SIZE = 4;
+  const pageCount = Math.ceil(list.length / PAGE_SIZE);
+  // Tetap valid bila jumlah item berkurang (mis. setelah refresh).
+  const safePage = Math.min(page, Math.max(0, pageCount - 1));
+  const pageItems = list.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE);
+
+  // Reset ke halaman pertama saat berpindah tab.
+  useEffect(() => {
+    setPage(0);
+  }, [tab]);
+
   const emptyMsg =
     tab === "perlu"
       ? "Tidak ada permintaan yang perlu diproses."
@@ -100,8 +113,9 @@ export function AntrianClient({
           <EmptyState icon={<Inbox className="h-6 w-6" />} title={emptyMsg} />
         </Card>
       ) : (
+        <div className="space-y-5">
         <div className="grid gap-4 lg:grid-cols-2">
-          {list.map((r) => (
+          {pageItems.map((r) => (
             <Card key={r.id} className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <Avatar
@@ -200,6 +214,12 @@ export function AntrianClient({
               </div>
             </Card>
           ))}
+        </div>
+          <Pagination
+            page={safePage}
+            pageCount={pageCount}
+            onChange={setPage}
+          />
         </div>
       )}
 

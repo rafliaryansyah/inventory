@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Pagination } from "@/components/ui/pagination";
 import { SignatureModal } from "@/components/modals/signature-modal";
 import { useToast } from "@/components/layout/toast";
 import {
@@ -34,9 +35,18 @@ export function DeliveryNotesClient({ notes }: { notes: DnListItem[] }) {
   const [detail, setDetail] = useState<DeliveryNoteDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [signOpen, setSignOpen] = useState(false);
+  const [page, setPage] = useState(0);
   const [pdfPending, startPdf] = useTransition();
   const router = useRouter();
   const toast = useToast();
+
+  const PAGE_SIZE = 4;
+  const pageCount = Math.ceil(notes.length / PAGE_SIZE);
+  const safePage = Math.min(page, Math.max(0, pageCount - 1));
+  const pageNotes = notes.slice(
+    safePage * PAGE_SIZE,
+    safePage * PAGE_SIZE + PAGE_SIZE,
+  );
 
   useEffect(() => {
     if (!selectedId) {
@@ -80,7 +90,7 @@ export function DeliveryNotesClient({ notes }: { notes: DnListItem[] }) {
       {/* List */}
       <Card padless className="no-print h-fit overflow-hidden">
         <ul className="divide-y divide-line">
-          {notes.map((dn) => {
+          {pageNotes.map((dn) => {
             const active = dn.id === selectedId;
             return (
               <li key={dn.id}>
@@ -108,6 +118,15 @@ export function DeliveryNotesClient({ notes }: { notes: DnListItem[] }) {
             );
           })}
         </ul>
+        {pageCount > 1 && (
+          <div className="border-t border-line px-4 py-3">
+            <Pagination
+              page={safePage}
+              pageCount={pageCount}
+              onChange={setPage}
+            />
+          </div>
+        )}
       </Card>
 
       {/* Preview */}
@@ -174,11 +193,19 @@ function DnDocument({ detail }: { detail: DeliveryNoteDetail }) {
     <div className="space-y-6 text-ink">
       {/* Kop */}
       <div className="flex items-start justify-between border-b border-line pb-4">
-        <div>
-          <p className="display-serif text-xl">PT Handal Informasi Teknologi</p>
-          <p className="text-sm text-ink-mute">
-            Delivery Note — Serah Terima Aset
-          </p>
+        <div className="flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="Handal Informasi Teknologi"
+            className="h-12 w-auto"
+          />
+          <div>
+            <p className="display-serif text-xl">PT Handal Informasi Teknologi</p>
+            <p className="text-sm text-ink-mute">
+              Delivery Note — Serah Terima Aset
+            </p>
+          </div>
         </div>
         <span className="display-serif text-lg text-amber">AssetFlow</span>
       </div>

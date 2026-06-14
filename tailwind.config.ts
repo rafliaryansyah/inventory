@@ -5,13 +5,15 @@ export default {
   theme: {
     extend: {
       colors: {
-        warm: "#F5F1E8",
+        // Tema Handal — biru muda. Nama token `amber*` dipertahankan sebagai
+        // warna brand agar tidak perlu mengubah 48+ pemakaian; nilainya biru.
+        warm: "#EEF3FB",
         ink: "#1A1F2E",
         "ink-soft": "#4A5060",
         "ink-mute": "#7A8090",
-        amber: "#B8842B",
-        "amber-dk": "#8E6620",
-        "amber-sf": "#F5DEBE",
+        amber: "#4F86C6",
+        "amber-dk": "#2F5C9E",
+        "amber-sf": "#DCEAF8",
         navy: "#1E3A5F",
         "navy-sf": "#DCE5F0",
         sage: "#5A7A5A",
@@ -19,8 +21,8 @@ export default {
         rust: "#A02F3E",
         "rust-sf": "#FBE9EC",
         paper: "#FFFFFF",
-        line: "#E8E2D4",
-        "line-dk": "#D9D2C0",
+        line: "#DCE6F1",
+        "line-dk": "#C6D4E6",
       },
       fontFamily: {
         serif: ["var(--font-fraunces)", "serif"],

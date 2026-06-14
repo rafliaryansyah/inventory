@@ -1,12 +1,12 @@
 export const CHART_PALETTE = [
-  "#B8842B", // amber
+  "#4F86C6", // amber (brand biru)
   "#1E3A5F", // navy
   "#5A7A5A", // sage
   "#A02F3E", // rust
-  "#8E6620", // amber-dk
+  "#2F5C9E", // amber-dk (brand biru tua)
   "#4A5060", // ink-soft
   "#7A8090", // ink-mute
-  "#D9D2C0", // line-dk
+  "#C6D4E6", // line-dk
 ];
 
 export type DonutDatum = { label: string; value: number };
@@ -40,7 +40,7 @@ export function DonutChart({
             cy={cy}
             r={r}
             fill="none"
-            stroke="#E8E2D4"
+            stroke="#DCE6F1"
             strokeWidth={thickness}
           />
           {total > 0 &&

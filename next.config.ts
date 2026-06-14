@@ -4,8 +4,8 @@ const nextConfig: NextConfig = {
   // ESLint stylistic rules shouldn't block production builds for this app.
   eslint: { ignoreDuringBuilds: true },
   experimental: {
-    // Signature PNGs (base64) and uploads can exceed the default 1MB action body.
-    serverActions: { bodySizeLimit: "4mb" },
+    // Signature PNGs (base64) and uploads (foto aset s/d 5MB) can exceed defaults.
+    serverActions: { bodySizeLimit: "8mb" },
   },
 };
 

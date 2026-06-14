@@ -7,7 +7,7 @@
    ───────────────────────────────────────────────────────────── */
 @layer base {
   :root {
-    --ring-amber: 0 0 0 3px rgba(184, 132, 43, 0.12);
+    --ring-amber: 0 0 0 3px rgba(79, 134, 198, 0.18);
   }
 
   html {
@@ -15,14 +15,14 @@
   }
 
   body {
-    background-color: #f5f1e8; /* warm */
+    background-color: #eef3fb; /* warm */
     color: #1a1f2e; /* ink */
     font-feature-settings: "cv11", "ss01";
     text-rendering: optimizeLegibility;
   }
 
   ::selection {
-    background-color: #f5debe; /* amber-sf */
+    background-color: #dceaf8; /* amber-sf */
     color: #1a1f2e;
   }
 }
@@ -55,12 +55,12 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d9d2c0; /* line-dk */
+  background: #c6d4e6; /* line-dk */
   border-radius: 9999px;
-  border: 2px solid #f5f1e8;
+  border: 2px solid #eef3fb;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #c7bda6;
+  background: #aebfd6;
 }
 
 /* ── Form controls — base styling ─────────────────────────── */
@@ -74,7 +74,7 @@ textarea,
 select {
   width: 100%;
   background-color: #ffffff;
-  border: 1px solid #e8e2d4; /* line */
+  border: 1px solid #dce6f1; /* line */
   border-radius: 6px; /* rounded-md */
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
@@ -96,14 +96,14 @@ textarea::placeholder {
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: #b8842b; /* amber */
+  border-color: #4f86c6; /* amber */
   box-shadow: var(--ring-amber);
 }
 
 input:disabled,
 textarea:disabled,
 select:disabled {
-  background-color: #f5f1e8;
+  background-color: #eef3fb;
   color: #7a8090;
   cursor: not-allowed;
 }
@@ -168,7 +168,7 @@ select {
 /* Signature canvas */
 .sig-canvas {
   background-color: #ffffff;
-  border: 1px dashed #d9d2c0;
+  border: 1px dashed #c6d4e6;
   border-radius: 8px;
   touch-action: none;
   cursor: crosshair;

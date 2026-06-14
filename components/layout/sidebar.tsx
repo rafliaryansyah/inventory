@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -74,9 +75,14 @@ export function Sidebar({
       >
         {/* Brand */}
         <div className="flex h-16 items-center gap-2.5 border-b border-line px-6">
-          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-amber font-serif text-lg font-semibold text-paper">
-            A
-          </span>
+          <Image
+            src="/logo.png"
+            alt="Handal Informasi Teknologi"
+            width={45}
+            height={36}
+            priority
+            className="h-9 w-auto"
+          />
           <span className="display-serif text-xl">AssetFlow</span>
         </div>
 
