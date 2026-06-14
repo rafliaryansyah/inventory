@@ -33,6 +33,9 @@ function client(): S3Client {
     _client = new S3Client({
       region: "auto",
       endpoint: `https://${ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      // Setting kanonik R2: path-style (https://<acct>.r2…/<bucket>/<key>),
+      // menghindari edge-case virtual-host pada operasi & presigned URL.
+      forcePathStyle: true,
       credentials: {
         accessKeyId: ACCESS_KEY_ID!,
         secretAccessKey: SECRET_ACCESS_KEY!,
