@@ -21,12 +21,13 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Field } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/empty-state";
-import { QrGlyph } from "@/components/ui/qr-glyph";
+import { AssetQr } from "@/components/ui/asset-qr";
 import {
   QrScannerModal,
   type ScanAsset,
 } from "@/components/modals/qr-scanner-modal";
 import { AssetPhotosModal } from "@/components/modals/asset-photos-modal";
+import { AssetQrModal } from "@/components/modals/asset-qr-modal";
 import { useToast } from "@/components/layout/toast";
 import {
   registerAsset,
@@ -53,10 +54,12 @@ type User = { id: string; name: string; division: string | null };
 const STATUSES = ["AVAILABLE", "IN_USE", "MAINTENANCE", "DAMAGED", "RETIRED"];
 
 export function MasterAsetClient({
+  baseUrl,
   assets,
   categories,
   users,
 }: {
+  baseUrl: string;
   assets: Asset[];
   categories: Category[];
   users: User[];
@@ -67,6 +70,7 @@ export function MasterAsetClient({
   const [scanOpen, setScanOpen] = useState(false);
   const [transferTarget, setTransferTarget] = useState<Asset | null>(null);
   const [photoTarget, setPhotoTarget] = useState<Asset | null>(null);
+  const [qrTarget, setQrTarget] = useState<Asset | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -148,7 +152,15 @@ export function MasterAsetClient({
                     className="border-b border-line/60 last:border-0"
                   >
                     <td className="px-5 py-3">
-                      <QrGlyph value={a.qrCode ?? a.assetCode} size={32} />
+                      <button
+                        type="button"
+                        onClick={() => setQrTarget(a)}
+                        title="Lihat QR & link publik"
+                        className="rounded-md p-1 transition-colors hover:bg-warm"
+                        aria-label={`QR aset ${a.assetCode}`}
+                      >
+                        <AssetQr value={`${baseUrl}/p/${a.id}`} size={36} />
+                      </button>
                     </td>
                     <td className="px-5 py-3 font-mono text-xs">{a.assetCode}</td>
                     <td className="px-5 py-3">
@@ -207,10 +219,16 @@ export function MasterAsetClient({
         open={scanOpen}
         onClose={() => setScanOpen(false)}
         assets={assets as unknown as ScanAsset[]}
+        baseUrl={baseUrl}
       />
       <AssetPhotosModal
         asset={photoTarget}
         onClose={() => setPhotoTarget(null)}
+      />
+      <AssetQrModal
+        asset={qrTarget}
+        baseUrl={baseUrl}
+        onClose={() => setQrTarget(null)}
       />
     </div>
   );

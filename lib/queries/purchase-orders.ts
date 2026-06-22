@@ -15,6 +15,30 @@ export type PurchaseOrderRow = Awaited<
   ReturnType<typeof getPurchaseOrders>
 >[number];
 
+/** Full PO detail with line items (harga & link) for the detail modal. */
+export async function getPurchaseOrderDetail(id: string) {
+  const po = await prisma.purchaseOrder.findUnique({
+    where: { id },
+    include: { items: { orderBy: { createdAt: "asc" } } },
+  });
+  if (!po) return null;
+  return {
+    ...po,
+    totalCost: Number(po.totalCost),
+    items: po.items.map((it) => ({
+      id: it.id,
+      itemName: it.itemName,
+      quantity: it.quantity,
+      unitPrice: Number(it.unitPrice),
+      buyLink: it.buyLink,
+    })),
+  };
+}
+
+export type PurchaseOrderDetail = NonNullable<
+  Awaited<ReturnType<typeof getPurchaseOrderDetail>>
+>;
+
 /** Low-stock items, surfaced as a callout in the "PO Baru" modal. */
 export async function getLowStockItems() {
   const rows = await prisma.inventory.findMany({

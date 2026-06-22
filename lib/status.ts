@@ -6,7 +6,8 @@ export type StatusStyle = { label: string; cls: string };
 // `cls` = Tailwind background + text classes for the badge chip.
 export const STATUS_STYLES: Record<string, StatusStyle> = {
   // ── RequestStatus ──
-  PENDING_APPROVAL: { label: "Menunggu Approval", cls: "bg-amber-sf text-amber-dk" },
+  PENDING_APPROVAL: { label: "Menunggu Manager", cls: "bg-amber-sf text-amber-dk" },
+  PENDING_HRD: { label: "Menunggu HRD", cls: "bg-navy-sf text-navy" },
   APPROVED: { label: "Disetujui", cls: "bg-sage-sf text-sage" },
   REJECTED: { label: "Ditolak", cls: "bg-rust-sf text-rust" },
   PROCESSING: { label: "Diproses", cls: "bg-navy-sf text-navy" },

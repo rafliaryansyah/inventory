@@ -33,6 +33,8 @@ function revalidateRequestViews() {
   revalidatePath("/dashboard");
   revalidatePath("/approval");
   revalidatePath("/riwayat");
+  revalidatePath("/approval-hrd");
+  revalidatePath("/riwayat-hrd");
   revalidatePath("/antrian");
   revalidatePath("/", "layout");
 }
@@ -59,6 +61,8 @@ export async function submitRequest(
               categoryId: it.categoryId ?? null,
               itemName: it.itemName,
               quantity: it.quantity,
+              unitPrice: it.unitPrice ?? null,
+              buyLink: it.buyLink ?? null,
               notes: it.notes ?? null,
             })),
           },
@@ -129,12 +133,12 @@ export async function approveRequest(id: string): Promise<ActionResult> {
       await tx.assetRequest.update({
         where: { id },
         data: {
-          status: "APPROVED",
+          status: "PENDING_HRD",
           approvedById: user.id,
           approvedAt: new Date(),
           timeline: {
             create: {
-              label: `Disetujui oleh ${user.name ?? "Manager"}`,
+              label: `Disetujui Manager (${user.name ?? "Manager"}) — diteruskan ke HRD`,
               actor: user.name ?? "Manager",
             },
           },
@@ -144,10 +148,26 @@ export async function approveRequest(id: string): Promise<ActionResult> {
       await notify(tx, {
         userId: req.requesterId,
         type: "APPROVED",
-        title: "Permintaan disetujui",
-        message: `Permintaan ${req.requestNumber} Anda telah disetujui.`,
+        title: "Disetujui Manager",
+        message: `Permintaan ${req.requestNumber} disetujui Manager, menunggu persetujuan HRD.`,
         entityId: req.id,
       });
+
+      // Teruskan ke antrian HRD.
+      const hrds = await tx.user.findMany({
+        where: { role: "HRD", isActive: true },
+        select: { id: true },
+      });
+      await notifyMany(
+        tx,
+        hrds.map((h) => h.id),
+        {
+          type: "NEW_REQUEST",
+          title: "Permintaan menunggu approval HRD",
+          message: `Permintaan ${req.requestNumber} telah disetujui Manager dan menunggu persetujuan Anda.`,
+          entityId: req.id,
+        },
+      );
 
       await logAudit(tx, {
         userId: user.id,
@@ -158,7 +178,7 @@ export async function approveRequest(id: string): Promise<ActionResult> {
     });
 
     revalidateRequestViews();
-    return ok(undefined, "Permintaan disetujui.");
+    return ok(undefined, "Permintaan disetujui & diteruskan ke HRD.");
   } catch (e) {
     return fail(toActionError(e));
   }
@@ -214,6 +234,110 @@ export async function rejectRequest(
 
     revalidateRequestViews();
     return ok(undefined, "Permintaan ditolak.");
+  } catch (e) {
+    return fail(toActionError(e));
+  }
+}
+
+export async function approveRequestHrd(id: string): Promise<ActionResult> {
+  try {
+    const user = await requireRole("HRD");
+
+    await prisma.$transaction(async (tx) => {
+      const req = await tx.assetRequest.findUnique({ where: { id } });
+      if (!req) throw new Error("NOT_FOUND");
+      if (req.status !== "PENDING_HRD") {
+        throw new Error("Permintaan ini tidak menunggu persetujuan HRD.");
+      }
+
+      await tx.assetRequest.update({
+        where: { id },
+        data: {
+          status: "APPROVED",
+          hrdApprovedById: user.id,
+          hrdApprovedAt: new Date(),
+          timeline: {
+            create: {
+              label: `Disetujui HRD (${user.name ?? "HRD"})`,
+              actor: user.name ?? "HRD",
+            },
+          },
+        },
+      });
+
+      await notify(tx, {
+        userId: req.requesterId,
+        type: "APPROVED",
+        title: "Disetujui HRD",
+        message: `Permintaan ${req.requestNumber} disetujui HRD dan diteruskan ke Admin Aset.`,
+        entityId: req.id,
+      });
+
+      await logAudit(tx, {
+        userId: user.id,
+        action: "APPROVE_HRD",
+        entityType: "AssetRequest",
+        entityId: req.id,
+      });
+    });
+
+    revalidateRequestViews();
+    return ok(undefined, "Permintaan disetujui HRD.");
+  } catch (e) {
+    return fail(toActionError(e));
+  }
+}
+
+export async function rejectRequestHrd(
+  id: string,
+  input: unknown,
+): Promise<ActionResult> {
+  try {
+    const user = await requireRole("HRD");
+    const { reason } = rejectRequestSchema.parse(input);
+
+    await prisma.$transaction(async (tx) => {
+      const req = await tx.assetRequest.findUnique({ where: { id } });
+      if (!req) throw new Error("NOT_FOUND");
+      if (req.status !== "PENDING_HRD") {
+        throw new Error("Permintaan ini tidak menunggu persetujuan HRD.");
+      }
+
+      await tx.assetRequest.update({
+        where: { id },
+        data: {
+          status: "REJECTED",
+          hrdApprovedById: user.id,
+          hrdApprovedAt: new Date(),
+          hrdRejectReason: reason,
+          timeline: {
+            create: {
+              label: `Ditolak HRD (${user.name ?? "HRD"})`,
+              actor: user.name ?? "HRD",
+            },
+          },
+        },
+      });
+
+      await notify(tx, {
+        userId: req.requesterId,
+        type: "REJECTED",
+        title: "Ditolak HRD",
+        message: `Permintaan ${req.requestNumber} Anda ditolak HRD. Lihat alasannya di detail.`,
+        entityId: req.id,
+      });
+
+      await logAudit(tx, {
+        userId: user.id,
+        action: "REJECT_HRD",
+        entityType: "AssetRequest",
+        entityId: req.id,
+        changes: { reason },
+      });
+    });
+
+    revalidateRequestViews();
+    return ok(undefined, "Permintaan ditolak HRD.");
   } catch (e) {
     return fail(toActionError(e));
   }

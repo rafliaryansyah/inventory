@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Inbox, PlayCircle, FileText, PenLine } from "lucide-react";
+import { Inbox, PlayCircle, FileText, PenLine, ExternalLink } from "lucide-react";
 import { Tabs } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
 import { SignatureModal } from "@/components/modals/signature-modal";
 import { useToast } from "@/components/layout/toast";
 import { startProcessing } from "@/actions/requests";
-import { formatDate } from "@/lib/format";
+import { formatDate, rp } from "@/lib/format";
 
 type QReq = {
   id: string;
@@ -25,7 +25,13 @@ type QReq = {
   neededDate: Date | string | null;
   urgency: string;
   requester: { name: string; division: string | null; avatarColor: string | null };
-  items: { id: string; itemName: string; quantity: number }[];
+  items: {
+    id: string;
+    itemName: string;
+    quantity: number;
+    unitPrice: number | null;
+    buyLink: string | null;
+  }[];
   deliveryNote: { id: string; dnNumber: string; status: string } | null;
 };
 
@@ -140,13 +146,40 @@ export function AntrianClient({
                 </div>
               </div>
 
-              <ul className="space-y-1 border-t border-line pt-3 text-sm">
+              <ul className="space-y-2 border-t border-line pt-3 text-sm">
                 {r.items.map((it) => (
-                  <li key={it.id} className="flex justify-between">
-                    <span className="text-ink-soft">{it.itemName}</span>
-                    <span className="font-mono text-xs text-ink-mute">
-                      ×{it.quantity}
-                    </span>
+                  <li key={it.id} className="space-y-0.5">
+                    <div className="flex justify-between gap-2">
+                      <span className="text-ink-soft">{it.itemName}</span>
+                      <span className="font-mono text-xs text-ink-mute">
+                        ×{it.quantity}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-ink-mute">
+                        {it.unitPrice == null ? (
+                          "—"
+                        ) : (
+                          <>
+                            <span className="font-mono">{rp(it.unitPrice)}</span>
+                            <span className="text-ink-mute/70">
+                              {" "}
+                              · {rp(it.unitPrice * it.quantity)}
+                            </span>
+                          </>
+                        )}
+                      </span>
+                      {it.buyLink && (
+                        <a
+                          href={it.buyLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-amber-dk hover:underline"
+                        >
+                          Link beli <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>

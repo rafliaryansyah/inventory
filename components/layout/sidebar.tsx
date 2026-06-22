@@ -24,6 +24,7 @@ type NavItem = { href: string; label: string; icon: LucideIcon };
 const NAV: Record<UserRole, NavItem[]> = {
   KARYAWAN: [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/aset-tersedia", label: "Aset Tersedia", icon: Boxes },
     { href: "/permintaan", label: "Permintaan Saya", icon: FileText },
   ],
   ADMIN_ASET: [
@@ -38,12 +39,18 @@ const NAV: Record<UserRole, NavItem[]> = {
     { href: "/riwayat", label: "Riwayat Approval", icon: History },
     { href: "/laporan", label: "Laporan & Analytics", icon: BarChart3 },
   ],
+  HRD: [
+    { href: "/approval-hrd", label: "Antrian Approval", icon: CheckSquare },
+    { href: "/riwayat-hrd", label: "Riwayat Approval", icon: History },
+    { href: "/laporan", label: "Laporan & Analytics", icon: BarChart3 },
+  ],
 };
 
 const ROLE_LABEL: Record<UserRole, string> = {
   KARYAWAN: "Karyawan",
   ADMIN_ASET: "Admin Aset",
   MANAGER: "Manager",
+  HRD: "HRD",
 };
 
 export function Sidebar({

@@ -4,6 +4,14 @@ export const requestItemSchema = z.object({
   categoryId: z.string().uuid().optional().nullable(),
   itemName: z.string().trim().min(1, "Nama item wajib diisi"),
   quantity: z.coerce.number().int().positive("Qty minimal 1"),
+  unitPrice: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : v),
+    z.coerce.number().positive("Harga satuan harus lebih dari 0").optional(),
+  ),
+  buyLink: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().trim().url("Link beli harus URL valid (mis. https://…)").optional(),
+  ),
   notes: z.string().trim().optional().nullable(),
 });
 

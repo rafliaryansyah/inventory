@@ -73,7 +73,11 @@ export async function getReportData(): Promise<ReportData> {
     (priceByItem.get(name.toLowerCase()) ?? 0) * qty;
 
   const decided = requests.filter((r) => r.approvedAt !== null);
-  const approved = decided.filter((r) => r.status !== "REJECTED");
+  // Disetujui dari sisi Manager: tetap dihitung approved walau kemudian
+  // ditolak HRD (penolakan HRD ditandai dengan hrdApprovedAt terisi).
+  const approved = decided.filter(
+    (r) => r.status !== "REJECTED" || r.hrdApprovedAt !== null,
+  );
 
   // ── Metrics ──
   const monthRequests = requests.filter(

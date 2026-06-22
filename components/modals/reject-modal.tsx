@@ -6,18 +6,20 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { useToast } from "@/components/layout/toast";
-import { rejectRequest } from "@/actions/requests";
+import { rejectRequest, rejectRequestHrd } from "@/actions/requests";
 
 export function RejectModal({
   open,
   onClose,
   requestId,
   requestNumber,
+  layer = "manager",
 }: {
   open: boolean;
   onClose: () => void;
   requestId: string;
   requestNumber: string;
+  layer?: "manager" | "hrd";
 }) {
   const [reason, setReason] = useState("");
   const [pending, start] = useTransition();
@@ -27,7 +29,10 @@ export function RejectModal({
 
   const submit = () =>
     start(async () => {
-      const res = await rejectRequest(requestId, { reason });
+      const res =
+        layer === "hrd"
+          ? await rejectRequestHrd(requestId, { reason })
+          : await rejectRequest(requestId, { reason });
       if (res.ok) {
         toast.success(res.message ?? "Permintaan ditolak.");
         router.refresh();

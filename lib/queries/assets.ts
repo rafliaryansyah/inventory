@@ -26,6 +26,20 @@ export async function getAssets(filters?: AssetFilters) {
 
 export type AssetRow = Awaited<ReturnType<typeof getAssets>>[number];
 
+/** Detail aset publik (via QR) — hanya field non-sensitif, tanpa auth. */
+export async function getAssetPublic(id: string) {
+  return prisma.asset.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      assetCode: true,
+      name: true,
+      purchaseDate: true,
+      category: { select: { name: true } },
+    },
+  });
+}
+
 /** QR scanner lookup — by asset code or qr code. */
 export async function getAssetByCode(code: string) {
   return prisma.asset.findFirst({

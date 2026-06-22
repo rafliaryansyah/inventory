@@ -8,6 +8,10 @@ import { generatePoNumber } from "@/lib/codegen";
 import { logAudit } from "@/lib/audit";
 import { toActionError } from "@/lib/action-helpers";
 import { createPurchaseOrderSchema } from "@/lib/validations/purchase-order";
+import {
+  getPurchaseOrderDetail,
+  type PurchaseOrderDetail,
+} from "@/lib/queries/purchase-orders";
 import { ok, fail, type ActionResult } from "@/types";
 
 export async function createPurchaseOrder(
@@ -33,6 +37,14 @@ export async function createPurchaseOrder(
           totalCost,
           notes: data.notes ?? null,
           expectedAt: data.expectedAt ?? null,
+          items: {
+            create: data.items.map((it) => ({
+              itemName: it.itemName,
+              quantity: it.quantity,
+              unitPrice: it.unitPrice,
+              buyLink: it.buyLink ?? null,
+            })),
+          },
         },
       });
     });
@@ -81,6 +93,20 @@ export async function updatePurchaseOrderStatus(
 
     revalidatePath("/pengadaan");
     return ok(undefined, "Status PO diperbarui.");
+  } catch (e) {
+    return fail(toActionError(e));
+  }
+}
+
+/** On-demand PO detail (item + harga + link) for the detail modal. */
+export async function fetchPurchaseOrderDetail(
+  poId: string,
+): Promise<ActionResult<PurchaseOrderDetail>> {
+  try {
+    await requireRole("ADMIN_ASET");
+    const detail = await getPurchaseOrderDetail(poId);
+    if (!detail) return fail("Purchase Order tidak ditemukan.");
+    return ok(detail);
   } catch (e) {
     return fail(toActionError(e));
   }

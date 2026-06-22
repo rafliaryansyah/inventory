@@ -6,7 +6,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Field } from "@/components/ui/field";
-import { QrGlyph } from "@/components/ui/qr-glyph";
+import { AssetQr } from "@/components/ui/asset-qr";
 
 export type ScanAsset = {
   id: string;
@@ -22,10 +22,12 @@ export function QrScannerModal({
   open,
   onClose,
   assets,
+  baseUrl,
 }: {
   open: boolean;
   onClose: () => void;
   assets: ScanAsset[];
+  baseUrl: string;
 }) {
   const [code, setCode] = useState("");
   const [result, setResult] = useState<ScanAsset | "notfound" | null>(null);
@@ -116,7 +118,11 @@ export function QrScannerModal({
 
       {result && result !== "notfound" && (
         <div className="anim-scale mt-4 flex gap-4 rounded-lg border border-line bg-warm/50 p-4">
-          <QrGlyph value={result.assetCode} size={64} className="shrink-0" />
+          <AssetQr
+            value={`${baseUrl}/p/${result.id}`}
+            size={88}
+            className="shrink-0"
+          />
           <div className="min-w-0 flex-1">
             <p className="font-mono text-sm font-medium text-ink">
               {result.assetCode}

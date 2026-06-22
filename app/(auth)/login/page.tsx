@@ -9,8 +9,9 @@ import { Field } from "@/components/ui/field";
 
 const DEMO = [
   { role: "Karyawan", email: "budi@handal.co.id" },
-  { role: "Admin Aset", email: "siti@handal.co.id" },
   { role: "Manager", email: "bambang@handal.co.id" },
+  { role: "HRD", email: "hrd@handal.co.id" },
+  { role: "Admin Aset", email: "siti@handal.co.id" },
 ];
 
 export default function LoginPage() {

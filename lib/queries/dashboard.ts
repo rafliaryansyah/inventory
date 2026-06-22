@@ -11,7 +11,13 @@ export async function getKaryawanDashboard(userId: string) {
         where: {
           requesterId: userId,
           status: {
-            in: ["PENDING_APPROVAL", "APPROVED", "PROCESSING", "READY_TO_SIGN"],
+            in: [
+              "PENDING_APPROVAL",
+              "PENDING_HRD",
+              "APPROVED",
+              "PROCESSING",
+              "READY_TO_SIGN",
+            ],
           },
         },
       }),

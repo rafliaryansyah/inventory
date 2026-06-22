@@ -42,6 +42,7 @@ async function main() {
     { email: "siti@handal.co.id", name: "Siti Rahayu", role: "ADMIN_ASET", division: "General Affairs", avatarColor: "amber" },
     { email: "bambang@handal.co.id", name: "Bambang Sudirman", role: "MANAGER", division: "IT Support", avatarColor: "sage" },
     { email: "diana@handal.co.id", name: "Diana Putri", role: "MANAGER", division: "Marketing", avatarColor: "amber" },
+    { email: "hrd@handal.co.id", name: "Hendra Wijaya", role: "HRD", division: "Human Resources", avatarColor: "navy" },
   ] as const;
 
   const users: Record<string, { id: string; name: string }> = {};
@@ -63,6 +64,7 @@ async function main() {
   const siti = users["siti@handal.co.id"];
   const bambang = users["bambang@handal.co.id"];
   const diana = users["diana@handal.co.id"];
+  const hrd = users["hrd@handal.co.id"];
 
   // ── 2. Categories (6) ───────────────────────────────────
   const catNames = ["Laptop", "Monitor", "Mouse", "Keyboard", "Kabel HDMI", "Headset"];
@@ -139,13 +141,16 @@ async function main() {
     number: string;
     requester: { id: string; name: string };
     approver?: { id: string; name: string };
+    hrdApprover?: { id: string; name: string };
     reason: string;
     urgency: "RENDAH" | "NORMAL" | "TINGGI" | "KRITIKAL";
-    status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "PROCESSING" | "READY_TO_SIGN" | "COMPLETED";
+    status: "PENDING_APPROVAL" | "PENDING_HRD" | "APPROVED" | "REJECTED" | "PROCESSING" | "READY_TO_SIGN" | "COMPLETED";
     createdAt: Date;
     approvedAt?: Date;
+    hrdApprovedAt?: Date;
     neededDate: Date;
     rejectReason?: string;
+    hrdRejectReason?: string;
     items: { category: string; itemName: string; quantity: number; notes?: string }[];
     timeline: { label: string; actor: string; at: Date }[];
   };
@@ -293,6 +298,43 @@ async function main() {
         { label: "Aset diterima & ditandatangani", actor: sari.name, at: daysAgo(8) },
       ],
     },
+    {
+      // Disetujui Manager, MENUNGGU HRD — demo antrian approval HRD.
+      number: "REQ-2025-0009",
+      requester: budi,
+      approver: bambang,
+      reason: "Keyboard mekanikal untuk kebutuhan kerja harian yang lebih nyaman dan tahan lama.",
+      urgency: "NORMAL",
+      status: "PENDING_HRD",
+      createdAt: daysAgo(2),
+      approvedAt: daysAgo(1),
+      neededDate: daysAhead(6),
+      items: [{ category: "Keyboard", itemName: "Keyboard Mekanikal Keychron", quantity: 1 }],
+      timeline: [
+        { label: "Permintaan dikirim", actor: budi.name, at: daysAgo(2) },
+        { label: `Disetujui Manager (${bambang.name}) — diteruskan ke HRD`, actor: bambang.name, at: daysAgo(1) },
+      ],
+    },
+    {
+      // Sudah lewat Manager + HRD, siap diproses Admin — demo riwayat HRD.
+      number: "REQ-2025-0010",
+      requester: sari,
+      approver: diana,
+      hrdApprover: hrd,
+      reason: "Monitor kedua untuk mempercepat pekerjaan desain materi kampanye.",
+      urgency: "TINGGI",
+      status: "APPROVED",
+      createdAt: daysAgo(3),
+      approvedAt: daysAgo(2),
+      hrdApprovedAt: daysAgo(1),
+      neededDate: daysAhead(4),
+      items: [{ category: "Monitor", itemName: "Monitor Dell 27 inch", quantity: 1 }],
+      timeline: [
+        { label: "Permintaan dikirim", actor: sari.name, at: daysAgo(3) },
+        { label: `Disetujui Manager (${diana.name}) — diteruskan ke HRD`, actor: diana.name, at: daysAgo(2) },
+        { label: `Disetujui HRD (${hrd.name})`, actor: hrd.name, at: daysAgo(1) },
+      ],
+    },
   ];
 
   const reqByNumber: Record<string, string> = {};
@@ -303,11 +345,14 @@ async function main() {
         requesterId: r.requester.id,
         approvedById: r.approver?.id ?? null,
         approvedAt: r.approvedAt ?? null,
+        hrdApprovedById: r.hrdApprover?.id ?? null,
+        hrdApprovedAt: r.hrdApprovedAt ?? null,
         reason: r.reason,
         urgency: r.urgency,
         status: r.status,
         neededDate: r.neededDate,
         rejectReason: r.rejectReason ?? null,
+        hrdRejectReason: r.hrdRejectReason ?? null,
         createdAt: r.createdAt,
         items: {
           create: r.items.map((it) => ({

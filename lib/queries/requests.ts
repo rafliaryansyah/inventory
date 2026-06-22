@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import type { RequestStatus, Urgency } from "@prisma/client";
+import type { Prisma, RequestStatus, Urgency } from "@prisma/client";
+
+/** Konversi Decimal `unitPrice` tiap item → number agar bisa di-serialize ke Client Component. */
+function withItemPrice<T extends { unitPrice: Prisma.Decimal | null }>(it: T) {
+  return { ...it, unitPrice: it.unitPrice == null ? null : Number(it.unitPrice) };
+}
 
 export type RequestFilters = {
   search?: string;
@@ -35,7 +40,7 @@ export async function getMyRequests(userId: string, filters?: RequestFilters) {
 
 /** Full detail for the Request Detail modal. */
 export async function getRequestDetail(id: string) {
-  return prisma.assetRequest.findUnique({
+  const row = await prisma.assetRequest.findUnique({
     where: { id },
     include: {
       requester: {
@@ -48,11 +53,14 @@ export async function getRequestDetail(id: string) {
         },
       },
       approver: { select: { name: true } },
+      hrdApprover: { select: { name: true } },
       items: { include: { category: { select: { name: true } } } },
       timeline: { orderBy: { at: "asc" } },
       deliveryNote: { select: { id: true, dnNumber: true, status: true } },
     },
   });
+  if (!row) return null;
+  return { ...row, items: row.items.map(withItemPrice) };
 }
 
 export type RequestDetail = NonNullable<
@@ -61,7 +69,7 @@ export type RequestDetail = NonNullable<
 
 /** Manager approval queue — pending requests. */
 export async function getApprovalQueue() {
-  return prisma.assetRequest.findMany({
+  const rows = await prisma.assetRequest.findMany({
     where: { status: "PENDING_APPROVAL" },
     orderBy: { createdAt: "asc" },
     include: {
@@ -71,18 +79,31 @@ export async function getApprovalQueue() {
       items: { include: { category: { select: { name: true } } } },
     },
   });
+  return rows.map((r) => ({ ...r, items: r.items.map(withItemPrice) }));
 }
 
-/** Manager approval history — decided requests (approved or rejected). */
+/** HRD approval queue — requests approved by Manager, awaiting HRD. */
+export async function getHrdApprovalQueue() {
+  const rows = await prisma.assetRequest.findMany({
+    where: { status: "PENDING_HRD" },
+    orderBy: { approvedAt: "asc" },
+    include: {
+      requester: {
+        select: { id: true, name: true, division: true, avatarColor: true },
+      },
+      items: { include: { category: { select: { name: true } } } },
+    },
+  });
+  return rows.map((r) => ({ ...r, items: r.items.map(withItemPrice) }));
+}
+
+/** Manager approval history — what the Manager decided (layer 1). */
 export async function getApprovalHistory(
   filter: "ALL" | "APPROVED" | "REJECTED" = "ALL",
 ) {
-  const where: Record<string, unknown> = { approvedAt: { not: null } };
-  if (filter === "REJECTED") where.status = "REJECTED";
-  if (filter === "APPROVED") where.status = { not: "REJECTED" };
-
+  // Manager bertindak jika approvedAt ada (approve → diteruskan, atau reject).
   const rows = await prisma.assetRequest.findMany({
-    where,
+    where: { approvedAt: { not: null } },
     orderBy: { approvedAt: "desc" },
     include: {
       requester: { select: { name: true, division: true, avatarColor: true } },
@@ -91,17 +112,47 @@ export async function getApprovalHistory(
     },
   });
 
-  return rows.map((r) => ({
+  // Keputusan Manager: ditolak hanya jika Manager sendiri yang menolak
+  // (status REJECTED & HRD belum bertindak). Jika HRD yang menolak,
+  // dari sisi Manager permintaan itu tetap "disetujui".
+  const mapped = rows.map((r) => ({
     ...r,
+    decision: (r.status === "REJECTED" && r.hrdApprovedAt == null
+      ? "REJECTED"
+      : "APPROVED") as "APPROVED" | "REJECTED",
+  }));
+  return filter === "ALL" ? mapped : mapped.filter((r) => r.decision === filter);
+}
+
+/** HRD approval history — what HRD decided (layer 2). */
+export async function getHrdApprovalHistory(
+  filter: "ALL" | "APPROVED" | "REJECTED" = "ALL",
+) {
+  const rows = await prisma.assetRequest.findMany({
+    where: { hrdApprovedAt: { not: null } },
+    orderBy: { hrdApprovedAt: "desc" },
+    include: {
+      requester: { select: { name: true, division: true, avatarColor: true } },
+      hrdApprover: { select: { name: true } },
+      items: { select: { itemName: true, quantity: true } },
+    },
+  });
+
+  const mapped = rows.map((r) => ({
+    ...r,
+    // Shape agar cocok dengan <RiwayatClient/>: pakai tanggal & alasan HRD.
+    approvedAt: r.hrdApprovedAt,
+    rejectReason: r.hrdRejectReason,
     decision: (r.status === "REJECTED" ? "REJECTED" : "APPROVED") as
       | "APPROVED"
       | "REJECTED",
   }));
+  return filter === "ALL" ? mapped : mapped.filter((r) => r.decision === filter);
 }
 
 /** Admin processing queue grouped by stage (PLAN §8.2 tabs). */
 export async function getAdminQueue() {
-  const rows = await prisma.assetRequest.findMany({
+  const raw = await prisma.assetRequest.findMany({
     where: { status: { in: ["APPROVED", "PROCESSING", "READY_TO_SIGN"] } },
     orderBy: { approvedAt: "asc" },
     include: {
@@ -112,6 +163,7 @@ export async function getAdminQueue() {
       deliveryNote: { select: { id: true, dnNumber: true, status: true } },
     },
   });
+  const rows = raw.map((r) => ({ ...r, items: r.items.map(withItemPrice) }));
 
   return {
     perluProses: rows.filter((r) => r.status === "APPROVED"),

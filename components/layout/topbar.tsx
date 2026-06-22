@@ -15,6 +15,7 @@ const ROLE_LABEL: Record<UserRole, string> = {
   KARYAWAN: "Karyawan",
   ADMIN_ASET: "Admin Aset",
   MANAGER: "Manager",
+  HRD: "HRD",
 };
 
 export type TopbarUser = {

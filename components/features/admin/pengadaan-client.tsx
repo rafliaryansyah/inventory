@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Field } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PoDetailModal } from "@/components/modals/po-detail-modal";
 import { useToast } from "@/components/layout/toast";
 import {
   createPurchaseOrder,
@@ -53,6 +54,7 @@ export function PengadaanClient({
   lowStockItems: LowStock[];
 }) {
   const [open, setOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, start] = useTransition();
   const router = useRouter();
@@ -120,7 +122,13 @@ export function PengadaanClient({
                       className="border-b border-line/60 last:border-0"
                     >
                       <td className="px-5 py-3 font-mono text-xs">
-                        {po.poNumber}
+                        <button
+                          type="button"
+                          onClick={() => setDetailId(po.id)}
+                          className="text-amber-dk hover:underline"
+                        >
+                          {po.poNumber}
+                        </button>
                       </td>
                       <td className="px-5 py-3 text-ink">{po.supplier}</td>
                       <td className="px-5 py-3 text-ink-soft">
@@ -165,11 +173,24 @@ export function PengadaanClient({
         onClose={() => setOpen(false)}
         lowStockItems={lowStockItems}
       />
+      <PoDetailModal poId={detailId} onClose={() => setDetailId(null)} />
     </div>
   );
 }
 
-type ItemRow = { itemName: string; quantity: string; unitPrice: string };
+type ItemRow = {
+  itemName: string;
+  quantity: string;
+  unitPrice: string;
+  buyLink: string;
+};
+
+const EMPTY_PO_ITEM: ItemRow = {
+  itemName: "",
+  quantity: "1",
+  unitPrice: "0",
+  buyLink: "",
+};
 
 function PoModal({
   open,
@@ -183,9 +204,7 @@ function PoModal({
   const [supplier, setSupplier] = useState("");
   const [expectedAt, setExpectedAt] = useState("");
   const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<ItemRow[]>([
-    { itemName: "", quantity: "1", unitPrice: "0" },
-  ]);
+  const [items, setItems] = useState<ItemRow[]>([{ ...EMPTY_PO_ITEM }]);
   const [pending, start] = useTransition();
   const router = useRouter();
   const toast = useToast();
@@ -203,16 +222,13 @@ function PoModal({
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, [k]: v } : it)));
 
   const addItem = (preset?: Partial<ItemRow>) =>
-    setItems((prev) => [
-      ...prev,
-      { itemName: "", quantity: "1", unitPrice: "0", ...preset },
-    ]);
+    setItems((prev) => [...prev, { ...EMPTY_PO_ITEM, ...preset }]);
 
   const removeItem = (i: number) =>
     setItems((prev) => prev.filter((_, idx) => idx !== i));
 
-  const valid =
-    supplier.trim().length > 0 && items.some((it) => it.itemName.trim());
+  const filledItems = items.filter((it) => it.itemName.trim());
+  const valid = supplier.trim().length > 0 && filledItems.length > 0;
 
   const submit = () =>
     start(async () => {
@@ -220,13 +236,12 @@ function PoModal({
         supplier,
         expectedAt: expectedAt || undefined,
         notes: notes || undefined,
-        items: items
-          .filter((it) => it.itemName.trim())
-          .map((it) => ({
-            itemName: it.itemName,
-            quantity: it.quantity,
-            unitPrice: it.unitPrice,
-          })),
+        items: filledItems.map((it) => ({
+          itemName: it.itemName,
+          quantity: it.quantity,
+          unitPrice: it.unitPrice,
+          buyLink: it.buyLink || undefined,
+        })),
       });
       if (res.ok) {
         toast.success(res.message ?? "PO dibuat.");
@@ -235,7 +250,7 @@ function PoModal({
         setSupplier("");
         setExpectedAt("");
         setNotes("");
-        setItems([{ itemName: "", quantity: "1", unitPrice: "0" }]);
+        setItems([{ ...EMPTY_PO_ITEM }]);
       } else {
         toast.error(res.error);
       }
@@ -321,36 +336,45 @@ function PoModal({
           {items.map((it, i) => (
             <div
               key={i}
-              className="grid grid-cols-[1fr_70px_110px_auto] gap-2"
+              className="space-y-2 rounded-lg border border-line bg-warm/30 p-2.5"
             >
+              <div className="grid grid-cols-[1fr_70px_110px_auto] gap-2">
+                <input
+                  placeholder="Nama item"
+                  value={it.itemName}
+                  onChange={(e) => setItem(i, "itemName", e.target.value)}
+                />
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Qty"
+                  value={it.quantity}
+                  onChange={(e) => setItem(i, "quantity", e.target.value)}
+                />
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  placeholder="Harga"
+                  value={it.unitPrice}
+                  onChange={(e) => setItem(i, "unitPrice", e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeItem(i)}
+                  disabled={items.length === 1}
+                  className="flex items-center justify-center rounded-md px-2 text-ink-mute hover:bg-rust-sf hover:text-rust disabled:opacity-30"
+                  aria-label="Hapus item"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
               <input
-                placeholder="Nama item"
-                value={it.itemName}
-                onChange={(e) => setItem(i, "itemName", e.target.value)}
+                type="url"
+                placeholder="https://… (link beli, opsional)"
+                value={it.buyLink}
+                onChange={(e) => setItem(i, "buyLink", e.target.value)}
               />
-              <input
-                type="number"
-                min={1}
-                placeholder="Qty"
-                value={it.quantity}
-                onChange={(e) => setItem(i, "quantity", e.target.value)}
-              />
-              <input
-                type="number"
-                min={0}
-                placeholder="Harga"
-                value={it.unitPrice}
-                onChange={(e) => setItem(i, "unitPrice", e.target.value)}
-              />
-              <button
-                type="button"
-                onClick={() => removeItem(i)}
-                disabled={items.length === 1}
-                className="flex items-center justify-center rounded-md px-2 text-ink-mute hover:bg-rust-sf hover:text-rust disabled:opacity-30"
-                aria-label="Hapus item"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
             </div>
           ))}
         </div>

@@ -10,25 +10,34 @@ const LANDING: Record<UserRole, string> = {
   KARYAWAN: "/dashboard",
   ADMIN_ASET: "/antrian",
   MANAGER: "/approval",
+  HRD: "/approval-hrd",
 };
 
 // Route prefix → roles allowed (PLAN §7.2).
+// NOTE: lebih spesifik dulu (mis. /approval-hrd sebelum /approval).
 const ACCESS: { prefix: string; roles: UserRole[] }[] = [
   { prefix: "/dashboard", roles: ["KARYAWAN"] },
+  { prefix: "/aset-tersedia", roles: ["KARYAWAN"] },
   { prefix: "/permintaan", roles: ["KARYAWAN"] },
   { prefix: "/antrian", roles: ["ADMIN_ASET"] },
   { prefix: "/inventori", roles: ["ADMIN_ASET"] },
   { prefix: "/delivery-notes", roles: ["ADMIN_ASET"] },
   { prefix: "/pengadaan", roles: ["ADMIN_ASET"] },
   { prefix: "/master-aset", roles: ["ADMIN_ASET"] },
+  { prefix: "/approval-hrd", roles: ["HRD"] },
+  { prefix: "/riwayat-hrd", roles: ["HRD"] },
   { prefix: "/approval", roles: ["MANAGER"] },
   { prefix: "/riwayat", roles: ["MANAGER"] },
-  { prefix: "/laporan", roles: ["MANAGER"] },
+  { prefix: "/laporan", roles: ["MANAGER", "HRD"] },
 ];
 
 export default auth((req) => {
   const { nextUrl } = req;
   const path = nextUrl.pathname;
+
+  // Halaman publik (detail aset via QR) — tanpa login.
+  if (path.startsWith("/p/")) return NextResponse.next();
+
   const user = req.auth?.user;
   const isLogin = path === "/login";
 

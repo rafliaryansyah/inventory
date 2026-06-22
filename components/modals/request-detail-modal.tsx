@@ -13,9 +13,12 @@ import {
   fetchRequestDetail,
   approveRequest,
   rejectRequest,
+  approveRequestHrd,
+  rejectRequestHrd,
 } from "@/actions/requests";
 import type { RequestDetail } from "@/lib/queries/requests";
-import { formatDate } from "@/lib/format";
+import { formatDate, rp } from "@/lib/format";
+import { ExternalLink } from "lucide-react";
 
 export function RequestDetailModal({
   open,
@@ -26,8 +29,9 @@ export function RequestDetailModal({
   open: boolean;
   onClose: () => void;
   requestId: string | null;
-  mode?: "view" | "approval";
+  mode?: "view" | "approval" | "hrd-approval";
 }) {
+  const isHrd = mode === "hrd-approval";
   const [detail, setDetail] = useState<RequestDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [rejecting, setRejecting] = useState(false);
@@ -52,7 +56,9 @@ export function RequestDetailModal({
   const doApprove = () =>
     start(async () => {
       if (!requestId) return;
-      const res = await approveRequest(requestId);
+      const res = isHrd
+        ? await approveRequestHrd(requestId)
+        : await approveRequest(requestId);
       if (res.ok) {
         toast.success(res.message ?? "Permintaan disetujui.");
         router.refresh();
@@ -63,7 +69,9 @@ export function RequestDetailModal({
   const doReject = () =>
     start(async () => {
       if (!requestId) return;
-      const res = await rejectRequest(requestId, { reason });
+      const res = isHrd
+        ? await rejectRequestHrd(requestId, { reason })
+        : await rejectRequest(requestId, { reason });
       if (res.ok) {
         toast.success(res.message ?? "Permintaan ditolak.");
         router.refresh();
@@ -71,8 +79,9 @@ export function RequestDetailModal({
       } else toast.error(res.error);
     });
 
-  const canDecide =
-    mode === "approval" && detail?.status === "PENDING_APPROVAL";
+  const canDecide = isHrd
+    ? detail?.status === "PENDING_HRD"
+    : mode === "approval" && detail?.status === "PENDING_APPROVAL";
 
   const footer = canDecide ? (
     rejecting ? (
@@ -161,41 +170,92 @@ export function RequestDetailModal({
             <p className="text-sm text-ink-soft">{detail.reason}</p>
           </div>
 
-          {/* Reject reason (if rejected) */}
-          {detail.status === "REJECTED" && detail.rejectReason && (
-            <div className="rounded-lg border-l-4 border-rust bg-rust-sf/40 px-4 py-3">
-              <p className="eyebrow text-rust mb-1">Alasan Penolakan</p>
-              <p className="text-sm text-ink-soft">{detail.rejectReason}</p>
-            </div>
-          )}
+          {/* Reject reason (if rejected) — by Manager or HRD */}
+          {detail.status === "REJECTED" &&
+            (detail.hrdRejectReason || detail.rejectReason) && (
+              <div className="rounded-lg border-l-4 border-rust bg-rust-sf/40 px-4 py-3">
+                <p className="eyebrow text-rust mb-1">
+                  Alasan Penolakan{detail.hrdRejectReason ? " (HRD)" : " (Manager)"}
+                </p>
+                <p className="text-sm text-ink-soft">
+                  {detail.hrdRejectReason ?? detail.rejectReason}
+                </p>
+              </div>
+            )}
 
           {/* Items */}
           <div>
             <p className="eyebrow text-ink-mute mb-2">Item yang Diminta</p>
-            <div className="overflow-hidden rounded-lg border border-line">
+            <div className="overflow-x-auto rounded-lg border border-line">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-line bg-warm/50 text-left">
                     <th className="eyebrow px-4 py-2 text-ink-mute">Item</th>
-                    <th className="eyebrow px-4 py-2 text-ink-mute">Kategori</th>
+                    <th className="eyebrow px-4 py-2 text-right text-ink-mute">
+                      Harga
+                    </th>
                     <th className="eyebrow px-4 py-2 text-right text-ink-mute">
                       Qty
                     </th>
+                    <th className="eyebrow px-4 py-2 text-right text-ink-mute">
+                      Subtotal
+                    </th>
+                    <th className="eyebrow px-4 py-2 text-ink-mute">Link</th>
                   </tr>
                 </thead>
                 <tbody>
                   {detail.items.map((it) => (
                     <tr key={it.id} className="border-b border-line/60 last:border-0">
-                      <td className="px-4 py-2.5">{it.itemName}</td>
-                      <td className="px-4 py-2.5 text-ink-soft">
-                        {it.category?.name ?? "—"}
+                      <td className="px-4 py-2.5">
+                        {it.itemName}
+                        <span className="block text-xs text-ink-mute">
+                          {it.category?.name ?? "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-mono text-xs">
+                        {it.unitPrice == null ? "—" : rp(it.unitPrice)}
                       </td>
                       <td className="px-4 py-2.5 text-right font-mono">
                         {it.quantity}
                       </td>
+                      <td className="px-4 py-2.5 text-right font-mono text-xs">
+                        {it.unitPrice == null
+                          ? "—"
+                          : rp(it.unitPrice * it.quantity)}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {it.buyLink ? (
+                          <a
+                            href={it.buyLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-amber-dk hover:underline"
+                          >
+                            Buka <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        ) : (
+                          <span className="text-ink-mute">—</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t border-line bg-warm/40">
+                    <td className="px-4 py-2.5 font-medium" colSpan={3}>
+                      Total Estimasi
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-mono font-medium text-amber-dk">
+                      {rp(
+                        detail.items.reduce(
+                          (s, it) => s + (it.unitPrice ?? 0) * it.quantity,
+                          0,
+                        ),
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5" />
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>

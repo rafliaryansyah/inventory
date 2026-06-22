@@ -18,6 +18,7 @@ enum UserRole {
   KARYAWAN
   ADMIN_ASET
   MANAGER
+  HRD
 }
 
 enum Urgency {
@@ -29,6 +30,7 @@ enum Urgency {
 
 enum RequestStatus {
   PENDING_APPROVAL
+  PENDING_HRD
   APPROVED
   REJECTED
   PROCESSING
@@ -86,9 +88,10 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  requestsMade     AssetRequest[] @relation("Requester")
-  requestsApproved AssetRequest[] @relation("Approver")
-  assetsAssigned   Asset[]        @relation("AssignedTo")
+  requestsMade        AssetRequest[] @relation("Requester")
+  requestsApproved    AssetRequest[] @relation("Approver")
+  requestsHrdApproved AssetRequest[] @relation("HrdApprover")
+  assetsAssigned      Asset[]        @relation("AssignedTo")
   dnReceived       DeliveryNote[] @relation("Recipient")
   dnCreated        DeliveryNote[] @relation("Creator")
   notifications    Notification[]
@@ -137,14 +140,18 @@ model AssetRequest {
   urgency       Urgency       @default(NORMAL)
   status        RequestStatus @default(PENDING_APPROVAL)
   neededDate    DateTime?     @map("needed_date") @db.Date
-  approvedById  String?       @map("approved_by") @db.Uuid
-  approvedAt    DateTime?     @map("approved_at") @db.Timestamptz
-  rejectReason  String?       @map("reject_reason")
+  approvedById    String?     @map("approved_by") @db.Uuid
+  approvedAt      DateTime?   @map("approved_at") @db.Timestamptz
+  rejectReason    String?     @map("reject_reason")
+  hrdApprovedById String?     @map("hrd_approved_by") @db.Uuid
+  hrdApprovedAt   DateTime?   @map("hrd_approved_at") @db.Timestamptz
+  hrdRejectReason String?     @map("hrd_reject_reason")
   createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
   requester     User              @relation("Requester", fields: [requesterId], references: [id])
   approver      User?             @relation("Approver", fields: [approvedById], references: [id])
+  hrdApprover   User?             @relation("HrdApprover", fields: [hrdApprovedById], references: [id])
   items         RequestItem[]
   deliveryNote  DeliveryNote?
   purchaseOrder PurchaseOrder?
@@ -169,11 +176,13 @@ model RequestTimeline {
 }
 
 model RequestItem {
-  id         String  @id @default(uuid()) @db.Uuid
-  requestId  String  @map("request_id") @db.Uuid
-  categoryId String? @map("category_id") @db.Uuid
-  itemName   String  @map("item_name") @db.VarChar(200)
+  id         String   @id @default(uuid()) @db.Uuid
+  requestId  String   @map("request_id") @db.Uuid
+  categoryId String?  @map("category_id") @db.Uuid
+  itemName   String   @map("item_name") @db.VarChar(200)
   quantity   Int
+  unitPrice  Decimal? @map("unit_price") @db.Decimal(15, 2)
+  buyLink    String?  @map("buy_link") @db.VarChar(500)
   notes      String?
 
   request  AssetRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
@@ -268,10 +277,26 @@ model PurchaseOrder {
   receivedAt DateTime? @map("received_at") @db.Timestamptz
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
-  request AssetRequest? @relation(fields: [requestId], references: [id])
+  request AssetRequest?     @relation(fields: [requestId], references: [id])
+  items   PurchaseOrderItem[]
 
   @@index([status])
   @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(uuid()) @db.Uuid
+  purchaseOrderId String   @map("purchase_order_id") @db.Uuid
+  itemName        String   @map("item_name") @db.VarChar(200)
+  quantity        Int
+  unitPrice       Decimal  @map("unit_price") @db.Decimal(15, 2)
+  buyLink         String?  @map("buy_link") @db.VarChar(500)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_items")
 }
 
 model Notification {

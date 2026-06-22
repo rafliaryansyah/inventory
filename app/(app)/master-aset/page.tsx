@@ -1,5 +1,6 @@
 import { getAssets, getAssignableUsers } from "@/lib/queries/assets";
 import { getCategories } from "@/lib/queries/inventory";
+import { getBaseUrl } from "@/lib/site";
 import { PageHeader } from "@/components/ui/page-header";
 import { MasterAsetClient } from "@/components/features/admin/master-aset-client";
 
@@ -9,6 +10,7 @@ export default async function MasterAsetPage() {
     getCategories(),
     getAssignableUsers(),
   ]);
+  const baseUrl = getBaseUrl();
 
   return (
     <div className="space-y-6">
@@ -22,6 +24,7 @@ export default async function MasterAsetPage() {
         subtitle="Registrasi, pelacakan QR, dan transfer kepemilikan seluruh aset."
       />
       <MasterAsetClient
+        baseUrl={baseUrl}
         assets={assets}
         categories={categories.map((c) => ({ id: c.id, name: c.name }))}
         users={users.map((u) => ({

@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { RejectModal } from "@/components/modals/reject-modal";
 import { RequestDetailModal } from "@/components/modals/request-detail-modal";
 import { useToast } from "@/components/layout/toast";
-import { approveRequest } from "@/actions/requests";
+import { approveRequest, approveRequestHrd } from "@/actions/requests";
 import { formatDate } from "@/lib/format";
 
 type ReqCard = {
@@ -25,7 +25,14 @@ type ReqCard = {
   items: { id: string; itemName: string; quantity: number }[];
 };
 
-export function ApprovalClient({ requests }: { requests: ReqCard[] }) {
+export function ApprovalClient({
+  requests,
+  layer = "manager",
+}: {
+  requests: ReqCard[];
+  layer?: "manager" | "hrd";
+}) {
+  const isHrd = layer === "hrd";
   const [rejectTarget, setRejectTarget] = useState<{
     id: string;
     number: string;
@@ -39,7 +46,7 @@ export function ApprovalClient({ requests }: { requests: ReqCard[] }) {
   const approve = (id: string) => {
     setPendingId(id);
     start(async () => {
-      const res = await approveRequest(id);
+      const res = isHrd ? await approveRequestHrd(id) : await approveRequest(id);
       if (res.ok) {
         toast.success(res.message ?? "Permintaan disetujui.");
         router.refresh();
@@ -130,12 +137,13 @@ export function ApprovalClient({ requests }: { requests: ReqCard[] }) {
         onClose={() => setRejectTarget(null)}
         requestId={rejectTarget?.id ?? ""}
         requestNumber={rejectTarget?.number ?? ""}
+        layer={layer}
       />
       <RequestDetailModal
         open={detailId !== null}
         onClose={() => setDetailId(null)}
         requestId={detailId}
-        mode="approval"
+        mode={isHrd ? "hrd-approval" : "approval"}
       />
     </div>
   );

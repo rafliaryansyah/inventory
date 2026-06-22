@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { useToast } from "@/components/layout/toast";
 import { submitRequest } from "@/actions/requests";
+import { rp } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const URGENCIES = [
@@ -23,8 +24,25 @@ const itemForm = z.object({
   categoryId: z.string(),
   itemName: z.string().min(1, "Nama item wajib diisi"),
   quantity: z.coerce.number().int().positive("Qty minimal 1"),
+  // Opsional: boleh kosong; kalau diisi harus angka > 0 / URL valid.
+  unitPrice: z
+    .string()
+    .refine((v) => v === "" || Number(v) > 0, "Harga harus angka > 0"),
+  buyLink: z.union([
+    z.literal(""),
+    z.string().url("Link beli harus URL valid (mis. https://…)"),
+  ]),
   notes: z.string(),
 });
+
+const EMPTY_ITEM = {
+  categoryId: "",
+  itemName: "",
+  quantity: 1,
+  unitPrice: "",
+  buyLink: "",
+  notes: "",
+};
 
 const formSchema = z.object({
   reason: z.string().min(10, "Justifikasi minimal 10 karakter"),
@@ -57,12 +75,17 @@ export function RequestForm({
       reason: "",
       neededDate: "",
       urgency: "NORMAL",
-      items: [{ categoryId: "", itemName: "", quantity: 1, notes: "" }],
+      items: [{ ...EMPTY_ITEM }],
     },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
   const urgency = watch("urgency");
+  const watchedItems = watch("items");
+  const grandTotal = (watchedItems ?? []).reduce(
+    (s, it) => s + (Number(it?.quantity) || 0) * (Number(it?.unitPrice) || 0),
+    0,
+  );
 
   const onSubmit = async (values: FormValues) => {
     const res = await submitRequest({
@@ -73,6 +96,8 @@ export function RequestForm({
         categoryId: it.categoryId || undefined,
         itemName: it.itemName,
         quantity: it.quantity,
+        unitPrice: it.unitPrice || undefined,
+        buyLink: it.buyLink || undefined,
         notes: it.notes || undefined,
       })),
     });
@@ -149,60 +174,105 @@ export function RequestForm({
             variant="secondary"
             size="sm"
             icon={<Plus className="h-4 w-4" />}
-            onClick={() =>
-              append({ categoryId: "", itemName: "", quantity: 1, notes: "" })
-            }
+            onClick={() => append({ ...EMPTY_ITEM })}
           >
             Tambah Baris
           </Button>
         </div>
 
         <div className="space-y-3">
-          {fields.map((field, i) => (
-            <div
-              key={field.id}
-              className="grid grid-cols-1 gap-3 rounded-lg border border-line bg-warm/30 p-3 sm:grid-cols-[1fr_1.4fr_80px_1.4fr_auto]"
-            >
-              <select {...register(`items.${i}.categoryId`)} aria-label="Kategori">
-                <option value="">Kategori…</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                placeholder="Nama item"
-                {...register(`items.${i}.itemName`)}
-                aria-label="Nama item"
-              />
-              <input
-                type="number"
-                min={1}
-                placeholder="Qty"
-                {...register(`items.${i}.quantity`)}
-                aria-label="Qty"
-              />
-              <input
-                placeholder="Catatan (opsional)"
-                {...register(`items.${i}.notes`)}
-                aria-label="Catatan"
-              />
-              <button
-                type="button"
-                onClick={() => remove(i)}
-                disabled={fields.length === 1}
-                className="flex items-center justify-center rounded-md px-2 text-ink-mute transition-colors hover:bg-rust-sf hover:text-rust disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink-mute"
-                aria-label="Hapus baris"
+          {fields.map((field, i) => {
+            const it = watchedItems?.[i];
+            const subtotal =
+              (Number(it?.quantity) || 0) * (Number(it?.unitPrice) || 0);
+            const itemErr = errors.items?.[i];
+            return (
+              <div
+                key={field.id}
+                className="space-y-2.5 rounded-lg border border-line bg-warm/30 p-3"
               >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
+                {/* Baris 1 — kategori, nama, qty, hapus */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1.6fr_80px_auto]">
+                  <select
+                    {...register(`items.${i}.categoryId`)}
+                    aria-label="Kategori"
+                  >
+                    <option value="">Kategori…</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    placeholder="Nama item"
+                    {...register(`items.${i}.itemName`)}
+                    aria-label="Nama item"
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder="Qty"
+                    {...register(`items.${i}.quantity`)}
+                    aria-label="Qty"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => remove(i)}
+                    disabled={fields.length === 1}
+                    className="flex items-center justify-center rounded-md px-2 text-ink-mute transition-colors hover:bg-rust-sf hover:text-rust disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink-mute"
+                    aria-label="Hapus baris"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Baris 2 — harga satuan, link beli, catatan */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[150px_1.6fr_1fr]">
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    placeholder="Harga satuan (opsional)"
+                    {...register(`items.${i}.unitPrice`)}
+                    aria-label="Harga satuan"
+                  />
+                  <input
+                    type="url"
+                    placeholder="https://… (link beli, opsional)"
+                    {...register(`items.${i}.buyLink`)}
+                    aria-label="Link beli"
+                  />
+                  <input
+                    placeholder="Catatan (opsional)"
+                    {...register(`items.${i}.notes`)}
+                    aria-label="Catatan"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-rust">
+                    {itemErr?.unitPrice?.message ?? itemErr?.buyLink?.message ?? ""}
+                  </span>
+                  <span className="text-xs text-ink-mute">
+                    Subtotal:{" "}
+                    <span className="font-mono text-ink-soft">{rp(subtotal)}</span>
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </div>
         {errors.items?.message && (
           <p className="text-xs text-rust">{errors.items.message}</p>
         )}
+
+        <div className="flex items-center justify-between border-t border-line pt-3">
+          <span className="text-sm text-ink-soft">Total Estimasi</span>
+          <span className="display-serif text-xl text-amber-dk">
+            {rp(grandTotal)}
+          </span>
+        </div>
       </Card>
 
       {/* Sticky action bar */}
