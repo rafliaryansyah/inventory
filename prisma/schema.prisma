@@ -38,6 +38,11 @@ enum RequestStatus {
   COMPLETED
 }
 
+enum RequestType {
+  PEMBELIAN
+  PENGGUNAAN
+}
+
 enum AssetStatus {
   AVAILABLE
   IN_USE
@@ -136,6 +141,7 @@ model AssetRequest {
   id            String        @id @default(uuid()) @db.Uuid
   requestNumber String        @unique @map("request_number") @db.VarChar(30)
   requesterId   String        @map("requester_id") @db.Uuid
+  type          RequestType   @default(PEMBELIAN)
   reason        String
   urgency       Urgency       @default(NORMAL)
   status        RequestStatus @default(PENDING_APPROVAL)
@@ -179,6 +185,7 @@ model RequestItem {
   id         String   @id @default(uuid()) @db.Uuid
   requestId  String   @map("request_id") @db.Uuid
   categoryId String?  @map("category_id") @db.Uuid
+  assetId    String?  @map("asset_id") @db.Uuid
   itemName   String   @map("item_name") @db.VarChar(200)
   quantity   Int
   unitPrice  Decimal? @map("unit_price") @db.Decimal(15, 2)
@@ -187,8 +194,10 @@ model RequestItem {
 
   request  AssetRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
   category AssetCategory? @relation(fields: [categoryId], references: [id])
+  asset    Asset?         @relation(fields: [assetId], references: [id])
 
   @@index([requestId])
+  @@index([assetId])
   @@map("request_items")
 }
 
@@ -205,10 +214,11 @@ model Asset {
   createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime    @updatedAt @map("updated_at") @db.Timestamptz
 
-  category   AssetCategory      @relation(fields: [categoryId], references: [id])
-  assignedTo User?              @relation("AssignedTo", fields: [assignedToId], references: [id])
-  dnItems    DeliveryNoteItem[]
-  photos     AssetPhoto[]
+  category     AssetCategory      @relation(fields: [categoryId], references: [id])
+  assignedTo   User?              @relation("AssignedTo", fields: [assignedToId], references: [id])
+  dnItems      DeliveryNoteItem[]
+  photos       AssetPhoto[]
+  requestItems RequestItem[]
 
   @@index([status])
   @@index([categoryId])

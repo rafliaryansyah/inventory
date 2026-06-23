@@ -12,6 +12,7 @@ import { statusLabel } from "@/lib/status";
 type Req = {
   id: string;
   requestNumber: string;
+  type: string;
   createdAt: Date | string;
   status: string;
   urgency: string;
@@ -112,6 +113,7 @@ export function PermintaanList({ requests }: { requests: Req[] }) {
               <thead>
                 <tr className="border-b border-line text-left">
                   <th className="eyebrow px-5 py-3 text-ink-mute">Nomor</th>
+                  <th className="eyebrow px-5 py-3 text-ink-mute">Jenis</th>
                   <th className="eyebrow px-5 py-3 text-ink-mute">Tanggal</th>
                   <th className="eyebrow px-5 py-3 text-ink-mute">Item</th>
                   <th className="eyebrow px-5 py-3 text-ink-mute">Urgensi</th>
@@ -128,6 +130,9 @@ export function PermintaanList({ requests }: { requests: Req[] }) {
                   >
                     <td className="px-5 py-3 font-mono text-xs">
                       {r.requestNumber}
+                    </td>
+                    <td className="px-5 py-3">
+                      <Badge status={r.type} />
                     </td>
                     <td className="px-5 py-3 text-ink-soft">
                       {formatDate(r.createdAt)}

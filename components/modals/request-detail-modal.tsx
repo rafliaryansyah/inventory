@@ -17,7 +17,7 @@ import {
   rejectRequestHrd,
 } from "@/actions/requests";
 import type { RequestDetail } from "@/lib/queries/requests";
-import { formatDate, rp } from "@/lib/format";
+import { formatDate, formatDuration, rp } from "@/lib/format";
 import { ExternalLink } from "lucide-react";
 
 export function RequestDetailModal({
@@ -143,6 +143,7 @@ export function RequestDetailModal({
               </div>
             </div>
             <div className="flex flex-col items-end gap-2">
+              <Badge status={detail.type} />
               <Badge status={detail.status} />
               <Badge status={detail.urgency} />
             </div>
@@ -209,7 +210,9 @@ export function RequestDetailModal({
                       <td className="px-4 py-2.5">
                         {it.itemName}
                         <span className="block text-xs text-ink-mute">
-                          {it.category?.name ?? "—"}
+                          {it.asset?.assetCode
+                            ? `${it.asset.assetCode} · ${it.category?.name ?? "—"}`
+                            : (it.category?.name ?? "—")}
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-right font-mono text-xs">
@@ -276,6 +279,9 @@ export function RequestDetailModal({
             </Field>
           )}
 
+          {/* Lead time per tahap (bottleneck) */}
+          <LeadTime detail={detail} />
+
           {/* Timeline */}
           {detail.timeline.length > 0 && (
             <div>
@@ -286,5 +292,110 @@ export function RequestDetailModal({
         </div>
       )}
     </Modal>
+  );
+}
+
+type StageState = "done" | "ongoing" | "pending" | "cancelled";
+type Stage = { label: string; state: StageState; durationMs: number | null };
+
+function LeadTime({ detail }: { detail: RequestDetail }) {
+  const now = Date.now();
+  const ms = (d: Date | string | null | undefined) =>
+    d ? new Date(d).getTime() : null;
+
+  const submitted = ms(detail.createdAt)!;
+  const mgr = ms(detail.approvedAt);
+  const hrd = ms(detail.hrdApprovedAt);
+  const done = ms(detail.deliveryNote?.signedAt);
+  const rejected = detail.status === "REJECTED";
+  const mgrRejected = rejected && hrd == null;
+
+  const stages: Stage[] = [
+    // 1) Manager: diajukan → keputusan manager (approvedAt selalu terisi saat manager bertindak)
+    mgr != null
+      ? { label: "Persetujuan Manager", state: "done", durationMs: mgr - submitted }
+      : { label: "Persetujuan Manager", state: "ongoing", durationMs: now - submitted },
+    // 2) HRD: keputusan manager → keputusan HRD
+    mgrRejected
+      ? { label: "Persetujuan HRD", state: "cancelled", durationMs: null }
+      : mgr == null
+        ? { label: "Persetujuan HRD", state: "pending", durationMs: null }
+        : hrd != null
+          ? { label: "Persetujuan HRD", state: "done", durationMs: hrd - mgr }
+          : { label: "Persetujuan HRD", state: "ongoing", durationMs: now - mgr },
+    // 3) Admin Aset: keputusan HRD → serah terima (TTD)
+    rejected
+      ? { label: "Serah Terima (Admin Aset)", state: "cancelled", durationMs: null }
+      : hrd == null
+        ? { label: "Serah Terima (Admin Aset)", state: "pending", durationMs: null }
+        : done != null
+          ? { label: "Serah Terima (Admin Aset)", state: "done", durationMs: done - hrd }
+          : { label: "Serah Terima (Admin Aset)", state: "ongoing", durationMs: now - hrd },
+  ];
+
+  // Total: diajukan → selesai / titik penolakan / sekarang
+  const totalEnd = done ?? (rejected ? (hrd ?? mgr ?? now) : now);
+  const totalOngoing = !done && !rejected;
+
+  // Bottleneck = tahap dengan durasi terlama (di antara done/ongoing).
+  let bottleneck = -1;
+  let maxDur = -1;
+  stages.forEach((s, i) => {
+    if (s.durationMs != null && s.durationMs > maxDur) {
+      maxDur = s.durationMs;
+      bottleneck = i;
+    }
+  });
+
+  return (
+    <div>
+      <p className="eyebrow text-ink-mute mb-2">Lead Time per Tahap</p>
+      <div className="overflow-hidden rounded-lg border border-line">
+        <ul className="divide-y divide-line">
+          {stages.map((s, i) => (
+            <li
+              key={s.label}
+              className="flex items-center justify-between gap-3 px-4 py-2.5"
+            >
+              <span className="flex items-center gap-2 text-sm text-ink">
+                {s.label}
+                {i === bottleneck && (
+                  <span className="rounded-sm bg-rust-sf px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rust">
+                    Bottleneck
+                  </span>
+                )}
+              </span>
+              <span className="shrink-0 text-right font-mono text-xs">
+                {s.state === "done" && (
+                  <span className="text-ink-soft">
+                    {formatDuration(s.durationMs!)}
+                  </span>
+                )}
+                {s.state === "ongoing" && (
+                  <span className="text-amber-dk">
+                    Berjalan · {formatDuration(s.durationMs!)}
+                  </span>
+                )}
+                {s.state === "pending" && (
+                  <span className="text-ink-mute">Menunggu</span>
+                )}
+                {s.state === "cancelled" && (
+                  <span className="text-ink-mute">—</span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div className="flex items-center justify-between gap-3 border-t border-line bg-warm/40 px-4 py-2.5">
+          <span className="text-sm font-medium text-ink">Total Lead Time</span>
+          <span className="text-right font-mono text-xs font-medium text-ink">
+            {formatDuration(totalEnd - submitted)}
+            {totalOngoing && (
+              <span className="font-normal text-ink-mute"> (berjalan)</span>
+            )}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }

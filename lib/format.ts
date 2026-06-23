@@ -66,6 +66,20 @@ export function formatDateTime(d: Date | string | null | undefined): string {
   );
 }
 
+/** Durasi singkat dalam bahasa Indonesia, mis. "1 hari 3 jam", "5 jam", "20 menit". */
+export function formatDuration(ms: number): string {
+  if (ms < 0) ms = 0;
+  const min = Math.floor(ms / 60000);
+  if (min < 1) return "< 1 menit";
+  if (min < 60) return `${min} menit`;
+  const h = Math.floor(min / 60);
+  const rm = min % 60;
+  if (h < 24) return rm ? `${h} jam ${rm} mnt` : `${h} jam`;
+  const d = Math.floor(h / 24);
+  const rh = h % 24;
+  return rh ? `${d} hari ${rh} jam` : `${d} hari`;
+}
+
 /** Time-aware Indonesian greeting. */
 export function greeting(d: Date = new Date()): string {
   const h = d.getHours();

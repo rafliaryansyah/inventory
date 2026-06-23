@@ -51,10 +51,32 @@ export async function getAssetByCode(code: string) {
   });
 }
 
-/** Assets that can be handed over on a Delivery Note. */
+/** Status request penggunaan yang masih "menahan" (reservasi) sebuah aset. */
+const ACTIVE_USAGE_STATUSES = [
+  "PENDING_APPROVAL",
+  "PENDING_HRD",
+  "APPROVED",
+  "PROCESSING",
+  "READY_TO_SIGN",
+] as const;
+
+/**
+ * Aset yang benar-benar bisa dipakai/diserahkan: status AVAILABLE dan TIDAK
+ * sedang ter-reservasi oleh request penggunaan yang masih aktif.
+ */
 export async function getAvailableAssets() {
   return prisma.asset.findMany({
-    where: { status: "AVAILABLE" },
+    where: {
+      status: "AVAILABLE",
+      requestItems: {
+        none: {
+          request: {
+            type: "PENGGUNAAN",
+            status: { in: [...ACTIVE_USAGE_STATUSES] },
+          },
+        },
+      },
+    },
     orderBy: { assetCode: "asc" },
     include: { category: { select: { name: true } } },
   });

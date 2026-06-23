@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, Boxes } from "lucide-react";
+import { Search, Boxes, Plus, Check, ShoppingCart } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
+import {
+  UsageRequestModal,
+  type CartAsset,
+} from "@/components/modals/usage-request-modal";
+import { cn } from "@/lib/utils";
 
 type AvailAsset = {
   id: string;
@@ -20,6 +26,8 @@ export function AsetTersediaClient({ assets }: { assets: AvailAsset[] }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [page, setPage] = useState(0);
+  const [cart, setCart] = useState<Record<string, CartAsset>>({});
+  const [modalOpen, setModalOpen] = useState(false);
 
   const categories = useMemo(
     () => Array.from(new Set(assets.map((a) => a.category.name))).sort(),
@@ -41,7 +49,6 @@ export function AsetTersediaClient({ assets }: { assets: AvailAsset[] }) {
     });
   }, [assets, search, category]);
 
-  // Reset ke halaman pertama saat filter berubah.
   useEffect(() => {
     setPage(0);
   }, [search, category]);
@@ -53,8 +60,23 @@ export function AsetTersediaClient({ assets }: { assets: AvailAsset[] }) {
     safePage * PAGE_SIZE + PAGE_SIZE,
   );
 
+  const cartItems = Object.values(cart);
+  const toggle = (a: AvailAsset) =>
+    setCart((prev) => {
+      const next = { ...prev };
+      if (next[a.id]) delete next[a.id];
+      else
+        next[a.id] = {
+          id: a.id,
+          assetCode: a.assetCode,
+          name: a.name,
+          category: a.category,
+        };
+      return next;
+    });
+
   return (
-    <div className="space-y-5">
+    <div className={cn("space-y-5", cartItems.length > 0 && "pb-24")}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-mute" />
@@ -101,28 +123,48 @@ export function AsetTersediaClient({ assets }: { assets: AvailAsset[] }) {
                     <th className="eyebrow px-5 py-3 text-ink-mute">Nama</th>
                     <th className="eyebrow px-5 py-3 text-ink-mute">Kode Aset</th>
                     <th className="eyebrow px-5 py-3 text-ink-mute">Lokasi</th>
+                    <th className="px-5 py-3" />
                   </tr>
                 </thead>
                 <tbody>
-                  {pageItems.map((a) => (
-                    <tr
-                      key={a.id}
-                      className="border-b border-line/60 last:border-0"
-                    >
-                      <td className="px-5 py-3">
-                        <span className="text-ink">{a.name}</span>
-                        <span className="block text-xs text-ink-mute">
-                          {a.category.name}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 font-mono text-xs">
-                        {a.assetCode}
-                      </td>
-                      <td className="px-5 py-3 text-ink-soft">
-                        {a.location ?? "—"}
-                      </td>
-                    </tr>
-                  ))}
+                  {pageItems.map((a) => {
+                    const picked = !!cart[a.id];
+                    return (
+                      <tr
+                        key={a.id}
+                        className="border-b border-line/60 last:border-0"
+                      >
+                        <td className="px-5 py-3">
+                          <span className="text-ink">{a.name}</span>
+                          <span className="block text-xs text-ink-mute">
+                            {a.category.name}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 font-mono text-xs">
+                          {a.assetCode}
+                        </td>
+                        <td className="px-5 py-3 text-ink-soft">
+                          {a.location ?? "—"}
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <Button
+                            variant={picked ? "primary" : "secondary"}
+                            size="sm"
+                            icon={
+                              picked ? (
+                                <Check className="h-4 w-4" />
+                              ) : (
+                                <Plus className="h-4 w-4" />
+                              )
+                            }
+                            onClick={() => toggle(a)}
+                          >
+                            {picked ? "Dipilih" : "Tambah"}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -138,6 +180,44 @@ export function AsetTersediaClient({ assets }: { assets: AvailAsset[] }) {
           </>
         )}
       </Card>
+
+      {/* Floating cart bar */}
+      {cartItems.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-paper/90 backdrop-blur-md lg:pl-64">
+          <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 px-5 py-3 md:px-8">
+            <span className="flex items-center gap-2 text-sm text-ink-soft">
+              <ShoppingCart className="h-4 w-4 text-amber-dk" />
+              <span className="font-medium text-ink">{cartItems.length}</span> aset
+              dipilih
+            </span>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={() => setCart({})}>
+                Kosongkan
+              </Button>
+              <Button variant="primary" onClick={() => setModalOpen(true)}>
+                Ajukan Penggunaan
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <UsageRequestModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        items={cartItems}
+        onRemove={(id) =>
+          setCart((prev) => {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          })
+        }
+        onSuccess={() => {
+          setCart({});
+          setModalOpen(false);
+        }}
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { notify, notifyMany } from "@/lib/notify";
 import { toActionError } from "@/lib/action-helpers";
 import {
   submitRequestSchema,
+  submitUsageRequestSchema,
   rejectRequestSchema,
 } from "@/lib/validations/request";
 import { ok, fail, type ActionResult } from "@/types";
@@ -36,6 +37,7 @@ function revalidateRequestViews() {
   revalidatePath("/approval-hrd");
   revalidatePath("/riwayat-hrd");
   revalidatePath("/antrian");
+  revalidatePath("/aset-tersedia");
   revalidatePath("/", "layout");
 }
 
@@ -107,6 +109,115 @@ export async function submitRequest(
         entityType: "AssetRequest",
         entityId: request.id,
         changes: { requestNumber, items: data.items.length },
+      });
+
+      return request.id;
+    });
+
+    revalidateRequestViews();
+    return ok({ id });
+  } catch (e) {
+    return fail(toActionError(e));
+  }
+}
+
+/** Request Penggunaan — karyawan memilih aset AVAILABLE (marketplace) untuk dipakai. */
+export async function submitUsageRequest(
+  input: unknown,
+): Promise<ActionResult<{ id: string }>> {
+  try {
+    const user = await requireRole("KARYAWAN");
+    const data = submitUsageRequestSchema.parse(input);
+
+    // Pastikan semua aset masih tersedia & belum ter-reservasi (anti double-book).
+    const assets = await prisma.asset.findMany({
+      where: {
+        id: { in: data.assetIds },
+        status: "AVAILABLE",
+        requestItems: {
+          none: {
+            request: {
+              type: "PENGGUNAAN",
+              status: {
+                in: [
+                  "PENDING_APPROVAL",
+                  "PENDING_HRD",
+                  "APPROVED",
+                  "PROCESSING",
+                  "READY_TO_SIGN",
+                ],
+              },
+            },
+          },
+        },
+      },
+      select: { id: true, name: true, categoryId: true },
+    });
+    if (assets.length !== data.assetIds.length) {
+      return fail(
+        "Sebagian aset sudah tidak tersedia. Muat ulang halaman dan coba lagi.",
+      );
+    }
+
+    const id = await prisma.$transaction(async (tx) => {
+      const requestNumber = await generateRequestNumber(tx);
+      const request = await tx.assetRequest.create({
+        data: {
+          requestNumber,
+          requesterId: user.id,
+          type: "PENGGUNAAN",
+          reason: data.reason,
+          urgency: data.urgency,
+          status: "PENDING_APPROVAL",
+          neededDate: data.neededDate,
+          items: {
+            create: assets.map((a) => ({
+              assetId: a.id,
+              categoryId: a.categoryId,
+              itemName: a.name,
+              quantity: 1,
+            })),
+          },
+          timeline: {
+            create: {
+              label: "Permintaan penggunaan dikirim",
+              actor: user.name ?? "Karyawan",
+            },
+          },
+        },
+      });
+
+      const inDivision = user.division
+        ? await tx.user.findMany({
+            where: { role: "MANAGER", isActive: true, division: user.division },
+            select: { id: true },
+          })
+        : [];
+      const managers =
+        inDivision.length > 0
+          ? inDivision
+          : await tx.user.findMany({
+              where: { role: "MANAGER", isActive: true },
+              select: { id: true },
+            });
+
+      await notifyMany(
+        tx,
+        managers.map((m) => m.id),
+        {
+          type: "NEW_REQUEST",
+          title: "Permintaan penggunaan aset baru",
+          message: `${user.name ?? "Karyawan"} mengajukan penggunaan aset ${requestNumber}.`,
+          entityId: request.id,
+        },
+      );
+
+      await logAudit(tx, {
+        userId: user.id,
+        action: "CREATE",
+        entityType: "AssetRequest",
+        entityId: request.id,
+        changes: { requestNumber, type: "PENGGUNAAN", assets: data.assetIds.length },
       });
 
       return request.id;

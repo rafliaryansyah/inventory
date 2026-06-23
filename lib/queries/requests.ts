@@ -54,9 +54,16 @@ export async function getRequestDetail(id: string) {
       },
       approver: { select: { name: true } },
       hrdApprover: { select: { name: true } },
-      items: { include: { category: { select: { name: true } } } },
+      items: {
+        include: {
+          category: { select: { name: true } },
+          asset: { select: { assetCode: true, name: true } },
+        },
+      },
       timeline: { orderBy: { at: "asc" } },
-      deliveryNote: { select: { id: true, dnNumber: true, status: true } },
+      deliveryNote: {
+        select: { id: true, dnNumber: true, status: true, signedAt: true },
+      },
     },
   });
   if (!row) return null;
@@ -159,7 +166,19 @@ export async function getAdminQueue() {
       requester: {
         select: { id: true, name: true, division: true, avatarColor: true },
       },
-      items: { include: { category: { select: { name: true } } } },
+      items: {
+        include: {
+          category: { select: { name: true } },
+          asset: {
+            select: {
+              id: true,
+              assetCode: true,
+              name: true,
+              category: { select: { name: true } },
+            },
+          },
+        },
+      },
       deliveryNote: { select: { id: true, dnNumber: true, status: true } },
     },
   });

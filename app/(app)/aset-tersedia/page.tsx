@@ -17,11 +17,11 @@ export default async function AsetTersediaPage() {
             Aset <span className="italic text-amber">Tersedia</span>
           </>
         }
-        subtitle="Daftar aset yang berstatus tersedia dan siap untuk diajukan."
+        subtitle="Pilih aset yang ingin dipakai lalu ajukan penggunaannya. Butuh barang yang belum ada? Ajukan pembelian."
         actions={
-          <Link href="/permintaan/baru" className={buttonClasses("primary", "md")}>
+          <Link href="/permintaan/baru" className={buttonClasses("secondary", "md")}>
             <Plus className="h-4 w-4" />
-            Ajukan Permintaan
+            Request Pembelian
           </Link>
         }
       />

@@ -24,6 +24,14 @@ export const submitRequestSchema = z.object({
 export type SubmitRequestInput = z.infer<typeof submitRequestSchema>;
 export type RequestItemInput = z.infer<typeof requestItemSchema>;
 
+export const submitUsageRequestSchema = z.object({
+  assetIds: z.array(z.string().uuid()).min(1, "Pilih minimal 1 aset"),
+  reason: z.string().trim().min(10, "Justifikasi minimal 10 karakter"),
+  neededDate: z.coerce.date({ message: "Tanggal dibutuhkan wajib diisi" }),
+  urgency: z.enum(["RENDAH", "NORMAL", "TINGGI", "KRITIKAL"]),
+});
+export type SubmitUsageRequestInput = z.infer<typeof submitUsageRequestSchema>;
+
 export const rejectRequestSchema = z.object({
   reason: z.string().trim().min(10, "Alasan penolakan minimal 10 karakter"),
 });

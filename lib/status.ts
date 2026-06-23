@@ -33,6 +33,10 @@ export const STATUS_STYLES: Record<string, StatusStyle> = {
   DAMAGED: { label: "Rusak", cls: "bg-rust-sf text-rust" },
   RETIRED: { label: "Pensiun", cls: "bg-line text-ink-soft" },
 
+  // ── RequestType ──
+  PEMBELIAN: { label: "Pembelian", cls: "bg-amber-sf text-amber-dk" },
+  PENGGUNAAN: { label: "Penggunaan", cls: "bg-navy-sf text-navy" },
+
   // ── Urgency ──
   RENDAH: { label: "Rendah", cls: "bg-line text-ink-soft" },
   NORMAL: { label: "Normal", cls: "bg-navy-sf text-navy" },

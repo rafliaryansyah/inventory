@@ -22,6 +22,7 @@ import { formatDate, rp } from "@/lib/format";
 type QReq = {
   id: string;
   requestNumber: string;
+  type: string;
   neededDate: Date | string | null;
   urgency: string;
   requester: { name: string; division: string | null; avatarColor: string | null };
@@ -31,6 +32,7 @@ type QReq = {
     quantity: number;
     unitPrice: number | null;
     buyLink: string | null;
+    asset: SelectableAsset | null;
   }[];
   deliveryNote: { id: string; dnNumber: string; status: string } | null;
 };
@@ -54,7 +56,22 @@ export function AntrianClient({
     id: string;
     number: string;
     recipient: string;
+    lockedAssets?: SelectableAsset[];
   } | null>(null);
+
+  // Untuk request penggunaan, aset DN sudah dipilih karyawan → kunci.
+  const openDn = (r: QReq) =>
+    setDnTarget({
+      id: r.id,
+      number: r.requestNumber,
+      recipient: r.requester.name,
+      lockedAssets:
+        r.type === "PENGGUNAAN"
+          ? r.items
+              .map((it) => it.asset)
+              .filter((a): a is SelectableAsset => a !== null)
+          : undefined,
+    });
   const [signTarget, setSignTarget] = useState<{
     dnId: string;
     dnNumber: string;
@@ -200,13 +217,7 @@ export function AntrianClient({
                       variant="primary"
                       size="sm"
                       icon={<FileText className="h-4 w-4" />}
-                      onClick={() =>
-                        setDnTarget({
-                          id: r.id,
-                          number: r.requestNumber,
-                          recipient: r.requester.name,
-                        })
-                      }
+                      onClick={() => openDn(r)}
                     >
                       Buat DN
                     </Button>
@@ -217,13 +228,7 @@ export function AntrianClient({
                     variant="primary"
                     size="sm"
                     icon={<FileText className="h-4 w-4" />}
-                    onClick={() =>
-                      setDnTarget({
-                        id: r.id,
-                        number: r.requestNumber,
-                        recipient: r.requester.name,
-                      })
-                    }
+                    onClick={() => openDn(r)}
                   >
                     Buat DN
                   </Button>
@@ -263,6 +268,7 @@ export function AntrianClient({
         requestNumber={dnTarget?.number ?? ""}
         recipientName={dnTarget?.recipient ?? ""}
         assets={availableAssets}
+        lockedAssets={dnTarget?.lockedAssets}
       />
       <SignatureModal
         open={signTarget !== null}
