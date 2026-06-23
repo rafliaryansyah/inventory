@@ -37,6 +37,16 @@ export const STATUS_STYLES: Record<string, StatusStyle> = {
   PEMBELIAN: { label: "Pembelian", cls: "bg-amber-sf text-amber-dk" },
   PENGGUNAAN: { label: "Penggunaan", cls: "bg-navy-sf text-navy" },
 
+  // ── UserRole ──
+  KARYAWAN: { label: "Karyawan", cls: "bg-navy-sf text-navy" },
+  ADMIN_ASET: { label: "Admin Aset", cls: "bg-amber-sf text-amber-dk" },
+  MANAGER: { label: "Manager", cls: "bg-sage-sf text-sage" },
+  HRD: { label: "HRD", cls: "bg-line text-ink-soft" },
+
+  // ── Aktivasi akun ──
+  AKTIF: { label: "Aktif", cls: "bg-sage-sf text-sage" },
+  NONAKTIF: { label: "Nonaktif", cls: "bg-rust-sf text-rust" },
+
   // ── Urgency ──
   RENDAH: { label: "Rendah", cls: "bg-line text-ink-soft" },
   NORMAL: { label: "Normal", cls: "bg-navy-sf text-navy" },

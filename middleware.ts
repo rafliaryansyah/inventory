@@ -24,6 +24,7 @@ const ACCESS: { prefix: string; roles: UserRole[] }[] = [
   { prefix: "/delivery-notes", roles: ["ADMIN_ASET"] },
   { prefix: "/pengadaan", roles: ["ADMIN_ASET"] },
   { prefix: "/master-aset", roles: ["ADMIN_ASET"] },
+  { prefix: "/master-karyawan", roles: ["HRD", "ADMIN_ASET"] },
   { prefix: "/approval-hrd", roles: ["HRD"] },
   { prefix: "/riwayat-hrd", roles: ["HRD"] },
   { prefix: "/approval", roles: ["MANAGER"] },

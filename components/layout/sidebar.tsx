@@ -14,6 +14,7 @@ import {
   CheckSquare,
   History,
   BarChart3,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import type { UserRole } from "@prisma/client";
@@ -33,6 +34,7 @@ const NAV: Record<UserRole, NavItem[]> = {
     { href: "/delivery-notes", label: "Delivery Notes", icon: Truck },
     { href: "/pengadaan", label: "Pengadaan", icon: ShoppingCart },
     { href: "/master-aset", label: "Master Aset", icon: QrCode },
+    { href: "/master-karyawan", label: "Master Karyawan", icon: Users },
   ],
   MANAGER: [
     { href: "/approval", label: "Antrian Approval", icon: CheckSquare },
@@ -42,6 +44,7 @@ const NAV: Record<UserRole, NavItem[]> = {
   HRD: [
     { href: "/approval-hrd", label: "Antrian Approval", icon: CheckSquare },
     { href: "/riwayat-hrd", label: "Riwayat Approval", icon: History },
+    { href: "/master-karyawan", label: "Master Karyawan", icon: Users },
     { href: "/laporan", label: "Laporan & Analytics", icon: BarChart3 },
   ],
 };
